@@ -104,7 +104,8 @@ select:focus{outline:none;border-color:#F58025}
 <div class="cg" id="pris"><div class="pc" data-v="low">Low</div><div class="pc pn" data-v="normal">Normal</div><div class="pc" data-v="high">High</div><div class="pc" data-v="urgent">Urgent</div></div>
 <div class="row"><div><label>Company</label><select id="co"><option value="">None</option><option value="craft-technology">Craft Technology</option><option value="wine-and-more">Wine &amp; More</option><option value="tipsy">Tipsy</option><option value="brza-distribucija">Brza Distribucija</option><option value="croatian-wine">Croatian Wine</option><option value="risely-digital">Risely Digital</option></select></div><div><label>Project</label><select id="pr"><option value="">None</option><option value="tipsy-masterclass">Tipsy Masterclass</option><option value="craft-platform">Craft Platform</option><option value="le-clinic-invisalign">Le Clinic</option><option value="ad-creation-tool">Ad Creation</option><option value="linkedin-analyzer">LinkedIn Analyzer</option><option value="jarvis-brain">Jarvis Brain</option></select></div></div>
 <button class="btn" id="sb">Send to Jarvis</button>
-<div class="hs"><h3>Recent</h3><div id="hl"><div class="es">No entries yet</div></div></div>
+<div class="hs"><h3>Recent (sent from this device)</h3><div id="hl"><div class="es">No entries yet</div></div></div>
+<div class="hs"><h3>Jarvis Queue <span id="qc" style="color:#F58025"></span></h3><div id="ql"><div class="es">Loading...</div></div></div>
 </div>
 
 <!-- TASKS PAGE -->
@@ -167,7 +168,42 @@ document.getElementById('sb').addEventListener('click',function(){
   var project=document.getElementById('pr').value||null;
   fetch(SB+'/rest/v1/inbox',{method:'POST',headers:Object.assign({},H,{'Prefer':'return=minimal'}),body:JSON.stringify({content:content,category:cat,priority:pri,company_hint:company,project_hint:project})}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);ss('st','Sent! Jarvis will process this next session.','ok');svh(content,cat,pri,company);document.getElementById('ct').value='';if(navigator.vibrate)navigator.vibrate(50)}).catch(function(e){ss('st','Failed: '+e.message,'err')}).finally(function(){btn.disabled=false;btn.textContent='Send to Jarvis'})
 });
-rih();
+rih();loadQueue();
+
+/* --- JARVIS QUEUE (from Supabase) --- */
+function loadQueue(){
+  fetch(SB+'/rest/v1/inbox?select=id,content,category,priority,company_hint,project_hint,created_at&processed=eq.false&order=created_at.desc&limit=20',{headers:H})
+  .then(function(r){return r.json()})
+  .then(function(data){
+    var el=document.getElementById('ql');
+    document.getElementById('qc').textContent='('+data.length+')';
+    if(!data.length){el.innerHTML='<div class="es">Queue empty — all processed</div>';return}
+    var s='';for(var i=0;i<data.length;i++){
+      var d=data[i];
+      var dt=new Date(d.created_at);
+      var ds=dt.toLocaleDateString('hr-HR')+' '+dt.toLocaleTimeString('hr-HR',{hour:'2-digit',minute:'2-digit'});
+      s+='<div class="hi" style="position:relative">'+
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start">'+
+        '<div style="flex:1;min-width:0">'+d.content+'</div>'+
+        '<div class="mark-btn" onclick="markProcessed(\''+d.id+'\',this)" style="color:#F58025;font-size:18px;cursor:pointer;padding:0 4px;margin-left:8px;-webkit-tap-highlight-color:transparent" title="Mark processed">&#10003;</div>'+
+        '</div>'+
+        '<div class="m"><span>'+d.category+'</span><span>'+d.priority+'</span>'+
+        (d.company_hint?'<span>'+d.company_hint+'</span>':'')+
+        (d.project_hint?'<span>'+d.project_hint+'</span>':'')+
+        '<span>'+ds+'</span></div></div>'
+    }
+    el.innerHTML=s
+  })
+  .catch(function(e){document.getElementById('ql').innerHTML='<div class="es" style="color:#f87171">Failed to load: '+e.message+'</div>'})
+}
+
+function markProcessed(id,el){
+  var card=el.closest('.hi');
+  card.style.opacity='0.3';
+  fetch(SB+'/rest/v1/inbox?id=eq.'+id,{method:'PATCH',headers:Object.assign({},H,{'Prefer':'return=minimal'}),body:JSON.stringify({processed:true,processed_at:new Date().toISOString()})})
+  .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);if(navigator.vibrate)navigator.vibrate(30);setTimeout(loadQueue,300)})
+  .catch(function(e){card.style.opacity='1';alert('Error: '+e.message)})
+}
 
 /* --- TASKS --- */
 var tpri='normal';
