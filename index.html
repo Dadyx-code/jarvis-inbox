@@ -93,6 +93,7 @@ select:focus{outline:none;border-color:#F58025}
 <div class="tabs">
   <div class="tab on" data-p="inbox">Inbox</div>
   <div class="tab" data-p="tasks">Tasks</div>
+  <div class="tab" data-p="content">Content</div>
 </div>
 
 <!-- INBOX PAGE -->
@@ -135,6 +136,22 @@ select:focus{outline:none;border-color:#F58025}
 <div id="doneList"></div>
 </div>
 
+<!-- CONTENT PAGE -->
+<div class="page" id="p-content">
+<div class="hdr"><h1>CONTENT</h1><div class="sub" id="content-count">LinkedIn posts pipeline</div></div>
+<div id="st3" class="st"></div>
+
+<div class="cg" id="cfilt">
+  <div class="ch on" data-v="all">All</div>
+  <div class="ch" data-v="idea">Ideas</div>
+  <div class="ch" data-v="draft">Drafts</div>
+  <div class="ch" data-v="approved">Ready</div>
+  <div class="ch" data-v="published">Published</div>
+</div>
+
+<div id="contentList"><div class="es">Loading...</div></div>
+</div>
+
 <script>
 var SB='https://swmtuepntjlkfzpvplsc.supabase.co';
 var SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN3bXR1ZXBudGpsa2Z6cHZwbHNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDk1MDMsImV4cCI6MjA5MDI4NTUwM30.0z2ow5b1k6dzv0pUiqyB9pfj60VPWB2tfox6gIp-pXo';
@@ -147,6 +164,7 @@ document.querySelectorAll('.tab').forEach(function(t){t.addEventListener('click'
   t.classList.add('on');
   document.getElementById('p-'+t.dataset.p).classList.add('on');
   if(t.dataset.p==='tasks') loadTasks();
+  if(t.dataset.p==='content') loadContent();
 })});
 
 /* --- INBOX --- */
@@ -247,6 +265,91 @@ function addTask(){
   var deadline=document.getElementById('tdate').value||null;
   var company=document.getElementById('tco').value||null;
   fetch(SB+'/rest/v1/tasks',{method:'POST',headers:Object.assign({},H,{'Prefer':'return=minimal'}),body:JSON.stringify({title:title,description:desc,deadline:deadline,priority:tpri,company_hint:company,source:'manual'})}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);ss('st2','Task added!','ok');if(navigator.vibrate)navigator.vibrate(50);closeAdd({stopPropagation:function(){}});loadTasks()}).catch(function(e){ss('st2','Failed: '+e.message,'err')})
+}
+
+/* --- CONTENT --- */
+var cfilt='all';
+document.querySelectorAll('#cfilt .ch').forEach(function(c){c.addEventListener('click',function(){
+  document.querySelectorAll('#cfilt .ch').forEach(function(x){x.classList.remove('on')});
+  c.classList.add('on');cfilt=c.dataset.v;loadContent();
+})});
+
+function statusColor(s){
+  if(s==='idea') return 'border-color:#555;color:#999';
+  if(s==='draft') return 'border-color:#5f3a1e;color:#F58025';
+  if(s==='approved') return 'border-color:#166534;color:#4ade80';
+  if(s==='scheduled') return 'border-color:#5f3a1e;color:#fb923c';
+  if(s==='published') return 'border-color:#1e3a5f;color:#60a5fa';
+  return 'color:#555';
+}
+
+function loadContent(){
+  var url=SB+'/rest/v1/linkedin_posts?select=*&order=created_at.desc&limit=50';
+  if(cfilt!=='all') url+='&status=eq.'+cfilt;
+  fetch(url,{headers:H}).then(function(r){return r.json()}).then(function(data){
+    var el=document.getElementById('contentList');
+    var counts={idea:0,draft:0,approved:0,scheduled:0,published:0};
+    data.forEach(function(p){counts[p.status]=(counts[p.status]||0)+1});
+    document.getElementById('content-count').textContent=
+      (counts.idea||0)+' ideas, '+(counts.draft||0)+' drafts, '+(counts.approved||0)+' ready, '+(counts.published||0)+' published';
+
+    if(!data.length){el.innerHTML='<div class="es">No content yet. Ideas will appear here when Jarvis captures them.</div>';return}
+
+    var s='';
+    for(var i=0;i<data.length;i++){
+      var p=data[i];
+      var dt=new Date(p.created_at);
+      var ds=dt.toLocaleDateString('hr-HR');
+      var sched=p.scheduled_date?new Date(p.scheduled_date+'T00:00:00').toLocaleDateString('hr-HR'):'';
+      var hasContent=p.content&&p.content.length>0;
+
+      s+='<div class="hi" style="margin-bottom:10px">';
+      s+='<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">';
+      s+='<div style="font-weight:600;font-size:14px;flex:1">'+p.title+'</div>';
+      s+='<span style="font-size:10px;padding:2px 8px;border-radius:10px;border:1px solid;white-space:nowrap;margin-left:8px;'+statusColor(p.status)+'">'+p.status+'</span>';
+      s+='</div>';
+
+      if(hasContent){
+        var preview=p.content.length>200?p.content.substring(0,200)+'...':p.content;
+        s+='<div style="font-size:12px;color:#888;line-height:1.5;margin-bottom:8px;white-space:pre-line">'+preview+'</div>';
+      }
+
+      if(p.framework){s+='<span style="font-size:10px;color:#F58025;margin-right:8px">'+p.framework+'</span>';}
+      s+='<span style="font-size:10px;color:#555">'+p.language.toUpperCase()+'</span>';
+      if(sched){s+='<span style="font-size:10px;color:#fb923c;margin-left:8px">Scheduled: '+sched+'</span>';}
+      s+='<span style="font-size:10px;color:#444;margin-left:8px">'+ds+'</span>';
+
+      if(p.status==='published'&&(p.impressions||p.comments||p.reactions)){
+        s+='<div style="margin-top:6px;display:flex;gap:10px">';
+        if(p.impressions) s+='<span style="font-size:11px;color:#F58025">'+p.impressions.toLocaleString()+' views</span>';
+        if(p.reactions) s+='<span style="font-size:11px;color:#4ade80">'+p.reactions+' reactions</span>';
+        if(p.comments) s+='<span style="font-size:11px;color:#fb923c">'+p.comments+' comments</span>';
+        if(p.reposts) s+='<span style="font-size:11px;color:#60a5fa">'+p.reposts+' reposts</span>';
+        s+='</div>';
+      }
+
+      if(p.status==='approved'&&hasContent){
+        s+='<div style="margin-top:8px"><button onclick="copyPost(this,\''+p.id+'\')" style="background:#14120e;border:1px solid #F58025;color:#F58025;padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer">Copy to clipboard</button></div>';
+      }
+
+      s+='</div>';
+    }
+    el.innerHTML=s;
+  }).catch(function(e){document.getElementById('contentList').innerHTML='<div class="es" style="color:#f87171">Failed: '+e.message+'</div>'})
+}
+
+function copyPost(btn,id){
+  fetch(SB+'/rest/v1/linkedin_posts?id=eq.'+id+'&select=content',{headers:H})
+  .then(function(r){return r.json()})
+  .then(function(data){
+    if(data[0]&&data[0].content){
+      navigator.clipboard.writeText(data[0].content).then(function(){
+        btn.textContent='Copied!';btn.style.borderColor='#4ade80';btn.style.color='#4ade80';
+        if(navigator.vibrate)navigator.vibrate(50);
+        setTimeout(function(){btn.textContent='Copy to clipboard';btn.style.borderColor='#F58025';btn.style.color='#F58025'},2000);
+      });
+    }
+  });
 }
 
 if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){})}
