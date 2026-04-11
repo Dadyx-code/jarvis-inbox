@@ -384,12 +384,13 @@ function loadContent(){
         s+='</div>';
       }
 
+      s+='<div style="margin-top:8px;display:flex;gap:8px" onclick="event.stopPropagation()">';
       if((p.status==='approved'||p.status==='draft')&&hasContent){
-        s+='<div style="margin-top:8px;display:flex;gap:8px" onclick="event.stopPropagation()">';
         s+='<button onclick="copyPost(this,\''+p.id+'\')" style="background:#14120e;border:1px solid #F58025;color:#F58025;padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer">Copy</button>';
         if(p.status==='draft'){s+='<button onclick="approvePost(this,\''+p.id+'\')" style="background:#14120e;border:1px solid #4ade80;color:#4ade80;padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer">Approve</button>';}
-        s+='</div>';
       }
+      s+='<button onclick="deletePost(this,\''+p.id+'\')" style="background:#14120e;border:1px solid #333;color:#666;padding:6px 10px;border-radius:8px;font-size:11px;cursor:pointer">X</button>';
+      s+='</div>';
 
       s+='</div>';
     }
@@ -406,6 +407,14 @@ function approvePost(btn,id){
   fetch(SB+'/rest/v1/linkedin_posts?id=eq.'+id,{method:'PATCH',headers:Object.assign({},H,{'Prefer':'return=minimal'}),body:JSON.stringify({status:'approved',updated_at:new Date().toISOString()})})
   .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);btn.textContent='Approved!';btn.style.borderColor='#4ade80';btn.style.color='#4ade80';if(navigator.vibrate)navigator.vibrate(50);setTimeout(loadContent,500)})
   .catch(function(e){alert('Error: '+e.message)})
+}
+
+function deletePost(btn,id){
+  if(!confirm('Obriši ovu ideju?'))return;
+  var card=btn.closest('.hi');card.style.opacity='0.3';
+  fetch(SB+'/rest/v1/linkedin_posts?id=eq.'+id,{method:'DELETE',headers:H})
+  .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);if(navigator.vibrate)navigator.vibrate(30);setTimeout(loadContent,300)})
+  .catch(function(e){card.style.opacity='1';alert('Error: '+e.message)})
 }
 
 function copyPost(btn,id){
