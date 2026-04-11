@@ -148,6 +148,13 @@ select:focus{outline:none;border-color:#F58025}
   <div class="ch" data-v="approved">Ready</div>
   <div class="ch" data-v="published">Published</div>
 </div>
+<div class="cg" id="ccatfilt" style="margin-top:-6px">
+  <div class="ch on" data-v="all" style="font-size:10px;padding:4px 10px">All Topics</div>
+  <div class="ch" data-v="ai_operations" style="font-size:10px;padding:4px 10px">AI/Ops</div>
+  <div class="ch" data-v="founder_reality" style="font-size:10px;padding:4px 10px">Founder</div>
+  <div class="ch" data-v="series" style="font-size:10px;padding:4px 10px">Series</div>
+  <div class="ch" data-v="sequel" style="font-size:10px;padding:4px 10px">Sequel</div>
+</div>
 
 <div id="contentList"><div class="es">Loading...</div></div>
 </div>
@@ -308,10 +315,14 @@ function resetAddForm(){
 }
 
 /* --- CONTENT --- */
-var cfilt='all';
+var cfilt='all',ccatfilt='all';
 document.querySelectorAll('#cfilt .ch').forEach(function(c){c.addEventListener('click',function(){
   document.querySelectorAll('#cfilt .ch').forEach(function(x){x.classList.remove('on')});
   c.classList.add('on');cfilt=c.dataset.v;loadContent();
+})});
+document.querySelectorAll('#ccatfilt .ch').forEach(function(c){c.addEventListener('click',function(){
+  document.querySelectorAll('#ccatfilt .ch').forEach(function(x){x.classList.remove('on')});
+  c.classList.add('on');ccatfilt=c.dataset.v;loadContent();
 })});
 
 function statusColor(s){
@@ -324,8 +335,9 @@ function statusColor(s){
 }
 
 function loadContent(){
-  var url=SB+'/rest/v1/linkedin_posts?select=*&order=created_at.desc&limit=50';
+  var url=SB+'/rest/v1/linkedin_posts?select=*&order=status.asc,created_at.desc&limit=50';
   if(cfilt!=='all') url+='&status=eq.'+cfilt;
+  if(ccatfilt!=='all') url+='&category=eq.'+ccatfilt;
   fetch(url,{headers:H}).then(function(r){return r.json()}).then(function(data){
     var el=document.getElementById('contentList');
     var counts={idea:0,draft:0,approved:0,scheduled:0,published:0};
@@ -356,11 +368,11 @@ function loadContent(){
         s+='<div id="'+pid+'" style="display:none;font-size:13px;color:#ccc;line-height:1.6;margin:10px 0;padding:12px;background:#0f0d0a;border-radius:8px;white-space:pre-line;border:1px solid #2a1a0a">'+p.content+'</div>';
       }
 
-      s+='<div style="margin-top:4px">';
-      if(p.framework){s+='<span style="font-size:10px;color:#F58025;margin-right:8px">'+p.framework+'</span>';}
-      s+='<span style="font-size:10px;color:#555">'+p.language.toUpperCase()+'</span>';
-      if(sched){s+='<span style="font-size:10px;color:#fb923c;margin-left:8px">'+sched+'</span>';}
-      s+='<span style="font-size:10px;color:#444;margin-left:8px">'+ds+'</span>';
+      s+='<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">';
+      if(p.category){var catLabel=p.category==='ai_operations'?'AI/Ops':p.category==='founder_reality'?'Founder':p.category==='series'?'Series':'Sequel';var catColor=p.category==='ai_operations'?'#F58025':p.category==='founder_reality'?'#60a5fa':'#4ade80';s+='<span style="font-size:9px;padding:2px 6px;border-radius:8px;background:'+catColor+'22;color:'+catColor+';border:1px solid '+catColor+'44">'+catLabel+'</span>';}
+      if(p.framework){s+='<span style="font-size:9px;padding:2px 6px;border-radius:8px;background:#F5802522;color:#F58025;border:1px solid #F5802544">'+p.framework+'</span>';}
+      if(sched){s+='<span style="font-size:9px;color:#fb923c">'+sched+'</span>';}
+      s+='<span style="font-size:9px;color:#444">'+ds+'</span>';
       s+='</div>';
 
       if(p.status==='published'&&(p.impressions||p.comments||p.reactions)){
