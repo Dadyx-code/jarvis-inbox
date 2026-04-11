@@ -302,22 +302,26 @@ function loadContent(){
       var ds=dt.toLocaleDateString('hr-HR');
       var sched=p.scheduled_date?new Date(p.scheduled_date+'T00:00:00').toLocaleDateString('hr-HR'):'';
       var hasContent=p.content&&p.content.length>0;
+      var pid='post-'+p.id.substring(0,8);
 
-      s+='<div class="hi" style="margin-bottom:10px">';
+      s+='<div class="hi" style="margin-bottom:10px;cursor:pointer" onclick="togglePost(\''+pid+'\')">';
       s+='<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">';
       s+='<div style="font-weight:600;font-size:14px;flex:1">'+p.title+'</div>';
       s+='<span style="font-size:10px;padding:2px 8px;border-radius:10px;border:1px solid;white-space:nowrap;margin-left:8px;'+statusColor(p.status)+'">'+p.status+'</span>';
       s+='</div>';
 
       if(hasContent){
-        var preview=p.content.length>200?p.content.substring(0,200)+'...':p.content;
-        s+='<div style="font-size:12px;color:#888;line-height:1.5;margin-bottom:8px;white-space:pre-line">'+preview+'</div>';
+        var preview=p.content.substring(0,120).replace(/\n/g,' ')+'...';
+        s+='<div style="font-size:12px;color:#666;margin-bottom:6px">'+preview+'</div>';
+        s+='<div id="'+pid+'" style="display:none;font-size:13px;color:#ccc;line-height:1.6;margin:10px 0;padding:12px;background:#0f0d0a;border-radius:8px;white-space:pre-line;border:1px solid #2a1a0a">'+p.content+'</div>';
       }
 
+      s+='<div style="margin-top:4px">';
       if(p.framework){s+='<span style="font-size:10px;color:#F58025;margin-right:8px">'+p.framework+'</span>';}
       s+='<span style="font-size:10px;color:#555">'+p.language.toUpperCase()+'</span>';
-      if(sched){s+='<span style="font-size:10px;color:#fb923c;margin-left:8px">Scheduled: '+sched+'</span>';}
+      if(sched){s+='<span style="font-size:10px;color:#fb923c;margin-left:8px">'+sched+'</span>';}
       s+='<span style="font-size:10px;color:#444;margin-left:8px">'+ds+'</span>';
+      s+='</div>';
 
       if(p.status==='published'&&(p.impressions||p.comments||p.reactions)){
         s+='<div style="margin-top:6px;display:flex;gap:10px">';
@@ -328,14 +332,28 @@ function loadContent(){
         s+='</div>';
       }
 
-      if(p.status==='approved'&&hasContent){
-        s+='<div style="margin-top:8px"><button onclick="copyPost(this,\''+p.id+'\')" style="background:#14120e;border:1px solid #F58025;color:#F58025;padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer">Copy to clipboard</button></div>';
+      if((p.status==='approved'||p.status==='draft')&&hasContent){
+        s+='<div style="margin-top:8px;display:flex;gap:8px" onclick="event.stopPropagation()">';
+        s+='<button onclick="copyPost(this,\''+p.id+'\')" style="background:#14120e;border:1px solid #F58025;color:#F58025;padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer">Copy</button>';
+        if(p.status==='draft'){s+='<button onclick="approvePost(this,\''+p.id+'\')" style="background:#14120e;border:1px solid #4ade80;color:#4ade80;padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer">Approve</button>';}
+        s+='</div>';
       }
 
       s+='</div>';
     }
     el.innerHTML=s;
   }).catch(function(e){document.getElementById('contentList').innerHTML='<div class="es" style="color:#f87171">Failed: '+e.message+'</div>'})
+}
+
+function togglePost(pid){
+  var el=document.getElementById(pid);
+  if(el){el.style.display=el.style.display==='none'?'block':'none'}
+}
+
+function approvePost(btn,id){
+  fetch(SB+'/rest/v1/linkedin_posts?id=eq.'+id,{method:'PATCH',headers:Object.assign({},H,{'Prefer':'return=minimal'}),body:JSON.stringify({status:'approved',updated_at:new Date().toISOString()})})
+  .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);btn.textContent='Approved!';btn.style.borderColor='#4ade80';btn.style.color='#4ade80';if(navigator.vibrate)navigator.vibrate(50);setTimeout(loadContent,500)})
+  .catch(function(e){alert('Error: '+e.message)})
 }
 
 function copyPost(btn,id){
