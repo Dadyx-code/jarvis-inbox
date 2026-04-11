@@ -228,12 +228,13 @@ var tpri='normal';
 document.querySelectorAll('#tpris .pc').forEach(function(c){c.addEventListener('click',function(e){e.stopPropagation();document.querySelectorAll('#tpris .pc').forEach(function(x){x.className='pc'});c.classList.add('p'+c.dataset.v[0]);tpri=c.dataset.v})});
 
 function openAdd(e){var el=document.getElementById('taskAdd');if(el.classList.contains('closed')){e.stopPropagation();el.classList.remove('closed');el.classList.add('open');el.onclick=null}}
-function closeAdd(e){e.stopPropagation();var el=document.getElementById('taskAdd');el.classList.remove('open');el.classList.add('closed');el.onclick=function(ev){openAdd(ev)};document.getElementById('tt').value='';document.getElementById('td').value='';document.getElementById('tdate').value='';tpri='normal';document.querySelectorAll('#tpris .pc').forEach(function(x){x.className='pc'});document.querySelector('#tpris .pc[data-v=normal]').classList.add('pn')}
+function closeAdd(e){e.stopPropagation();resetAddForm()}
 
 function deadlineInfo(d){if(!d)return{cls:'dl-none',txt:'No deadline'};var now=new Date();now.setHours(0,0,0,0);var dl=new Date(d+'T00:00:00');var diff=Math.ceil((dl-now)/(1000*60*60*24));if(diff<0)return{cls:'dl-over',txt:Math.abs(diff)+'d overdue'};if(diff===0)return{cls:'dl-over',txt:'Today'};if(diff===1)return{cls:'dl-soon',txt:'Tomorrow'};if(diff<=3)return{cls:'dl-soon',txt:diff+'d left'};return{cls:'dl-ok',txt:diff+'d left'}}
 
 function renderTask(t){var di=deadlineInfo(t.deadline);var isDone=t.status==='done';
-return '<div class="ti'+(isDone?' done':'')+'" data-id="'+t.id+'"><div class="ck" onclick="toggleTask(\''+t.id+'\','+(!isDone)+')">'+'</div><div class="info"><div class="title">'+t.title+'</div>'+(t.description?'<div class="desc">'+t.description+'</div>':'')+'<div class="meta"><span class="dl '+di.cls+'">'+di.txt+'</span><span class="badge badge-'+t.priority+'">'+t.priority+'</span>'+(t.company_hint?'<span class="badge badge-co">'+t.company_hint+'</span>':'')+'</div></div></div>'}
+var esc=function(s){return s?s.replace(/'/g,'&#39;').replace(/"/g,'&quot;'):''};
+return '<div class="ti'+(isDone?' done':'')+'" data-id="'+t.id+'"><div class="ck" onclick="toggleTask(\''+t.id+'\','+(!isDone)+')">'+'</div><div class="info"><div class="title">'+t.title+'</div>'+(t.description?'<div class="desc">'+t.description+'</div>':'')+'<div class="meta"><span class="dl '+di.cls+'">'+di.txt+'</span><span class="badge badge-'+t.priority+'">'+t.priority+'</span>'+(t.company_hint?'<span class="badge badge-co">'+t.company_hint+'</span>':'')+'</div>'+(isDone?'':'<div style="margin-top:6px;display:flex;gap:6px"><span onclick="event.stopPropagation();editTask(\''+t.id+'\',\''+esc(t.title)+'\',\''+esc(t.description||'')+'\',\''+t.priority+'\',\''+(t.deadline||'')+'\',\''+(t.company_hint||'')+'\')" style="font-size:10px;color:#F58025;cursor:pointer;-webkit-tap-highlight-color:transparent">Edit</span><span onclick="event.stopPropagation();deleteTask(\''+t.id+'\')" style="font-size:10px;color:#f87171;cursor:pointer;-webkit-tap-highlight-color:transparent">Delete</span></div>')+'</div></div>'}
 
 function loadTasks(){
   fetch(SB+'/rest/v1/tasks?order=deadline.asc.nullslast,created_at.desc&limit=100',{headers:H}).then(function(r){return r.json()}).then(function(data){
@@ -265,6 +266,45 @@ function addTask(){
   var deadline=document.getElementById('tdate').value||null;
   var company=document.getElementById('tco').value||null;
   fetch(SB+'/rest/v1/tasks',{method:'POST',headers:Object.assign({},H,{'Prefer':'return=minimal'}),body:JSON.stringify({title:title,description:desc,deadline:deadline,priority:tpri,company_hint:company,source:'manual'})}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);ss('st2','Task added!','ok');if(navigator.vibrate)navigator.vibrate(50);closeAdd({stopPropagation:function(){}});loadTasks()}).catch(function(e){ss('st2','Failed: '+e.message,'err')})
+}
+
+function editTask(id,title,desc,pri,deadline,company){
+  var el=document.getElementById('taskAdd');el.classList.remove('closed');el.classList.add('open');el.onclick=null;
+  document.getElementById('tt').value=title.replace(/&#39;/g,"'").replace(/&quot;/g,'"');
+  document.getElementById('td').value=desc.replace(/&#39;/g,"'").replace(/&quot;/g,'"');
+  document.getElementById('tdate').value=deadline||'';
+  document.getElementById('tco').value=company||'';
+  tpri=pri;document.querySelectorAll('#tpris .pc').forEach(function(x){x.className='pc'});
+  var pb=document.querySelector('#tpris .pc[data-v='+pri+']');if(pb)pb.classList.add('p'+pri[0]);
+  var addBtn=el.querySelector('.add-form .btn');
+  addBtn.textContent='Save';addBtn.setAttribute('onclick','saveEditTask(\''+id+'\')');
+}
+
+function saveEditTask(id){
+  var title=document.getElementById('tt').value.trim();
+  if(!title){ss('st2','Enter a task title','err');return}
+  var desc=document.getElementById('td').value.trim()||null;
+  var deadline=document.getElementById('tdate').value||null;
+  var company=document.getElementById('tco').value||null;
+  fetch(SB+'/rest/v1/tasks?id=eq.'+id,{method:'PATCH',headers:Object.assign({},H,{'Prefer':'return=minimal'}),body:JSON.stringify({title:title,description:desc,deadline:deadline,priority:tpri,company_hint:company,updated_at:new Date().toISOString()})})
+  .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);ss('st2','Task updated!','ok');if(navigator.vibrate)navigator.vibrate(50);resetAddForm();loadTasks()})
+  .catch(function(e){ss('st2','Failed: '+e.message,'err')})
+}
+
+function deleteTask(id){
+  if(!confirm('Delete this task?'))return;
+  fetch(SB+'/rest/v1/tasks?id=eq.'+id,{method:'DELETE',headers:H})
+  .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);if(navigator.vibrate)navigator.vibrate(30);loadTasks()})
+  .catch(function(e){ss('st2','Error: '+e.message,'err')})
+}
+
+function resetAddForm(){
+  var el=document.getElementById('taskAdd');el.classList.remove('open');el.classList.add('closed');
+  el.onclick=function(ev){openAdd(ev)};
+  document.getElementById('tt').value='';document.getElementById('td').value='';document.getElementById('tdate').value='';
+  tpri='normal';document.querySelectorAll('#tpris .pc').forEach(function(x){x.className='pc'});
+  document.querySelector('#tpris .pc[data-v=normal]').classList.add('pn');
+  var addBtn=el.querySelector('.add-form .btn');addBtn.textContent='Add';addBtn.setAttribute('onclick','addTask()');
 }
 
 /* --- CONTENT --- */
