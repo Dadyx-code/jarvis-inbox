@@ -99,6 +99,7 @@ select:focus{outline:none;border-color:#F58025}
 <!-- INBOX PAGE -->
 <div class="page on" id="p-inbox">
 <div class="hdr"><h1>JARVIS INBOX</h1><div class="sub">Speak it. Send it. Jarvis remembers.</div></div>
+<div id="briefingCard"></div>
 <div id="st" class="st"></div>
 <div class="ia"><textarea id="ct" placeholder="Tap here and speak with Wispr Flow, or type your idea..."></textarea></div>
 <div class="cg" id="cats"><div class="ch on" data-v="idea">Idea</div><div class="ch" data-v="task">Task</div><div class="ch" data-v="decision">Decision</div><div class="ch" data-v="note">Note</div></div>
@@ -193,7 +194,33 @@ document.getElementById('sb').addEventListener('click',function(){
   var project=document.getElementById('pr').value||null;
   fetch(SB+'/rest/v1/inbox',{method:'POST',headers:Object.assign({},H,{'Prefer':'return=minimal'}),body:JSON.stringify({content:content,category:cat,priority:pri,company_hint:company,project_hint:project})}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);ss('st','Sent! Jarvis will process this next session.','ok');svh(content,cat,pri,company);document.getElementById('ct').value='';if(navigator.vibrate)navigator.vibrate(50)}).catch(function(e){ss('st','Failed: '+e.message,'err')}).finally(function(){btn.disabled=false;btn.textContent='Send to Jarvis'})
 });
-rih();loadQueue();
+rih();loadQueue();loadBriefing();
+
+/* --- MORNING BRIEFING --- */
+function loadBriefing(){
+  fetch(SB+'/rest/v1/morning_briefing?select=*&order=briefing_date.desc&limit=1',{headers:H})
+  .then(function(r){return r.json()})
+  .then(function(data){
+    var el=document.getElementById('briefingCard');
+    if(!el||!data||!data.length){return}
+    var b=data[0];
+    function esc(s){return (s||'').toString().replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+    var dateStr=new Date(b.briefing_date).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'short'});
+    var wins=(b.wins||[]).map(function(w){return '<li>'+esc(w)+'</li>'}).join('');
+    var flags=(b.red_flags||[]).map(function(f){return '<li>'+esc(f)+'</li>'}).join('');
+    var tasks=(b.top_tasks||[]).slice(0,5).map(function(t){return '<li>'+esc(t.title||t)+'</li>'}).join('');
+    var approvals=Array.isArray(b.needs_approval)?b.needs_approval.length:0;
+    el.innerHTML='<div style="background:#14120e;border:1px solid #2a1a0a;border-left:3px solid #F58025;border-radius:10px;padding:14px;margin-bottom:12px">'+
+      '<div style="font-size:10px;color:#F58025;font-weight:700;letter-spacing:1px;margin-bottom:6px">MORNING BRIEFING &middot; '+dateStr+'</div>'+
+      '<div style="font-size:13px;color:#e0e0e0;line-height:1.5;margin-bottom:10px">'+esc(b.narrative||'')+'</div>'+
+      (wins?'<div style="font-size:10px;color:#4ade80;font-weight:700;margin-bottom:4px">YESTERDAY</div><ul style="font-size:12px;color:#999;margin:0 0 10px 16px;padding:0">'+wins+'</ul>':'')+
+      (flags?'<div style="font-size:10px;color:#f87171;font-weight:700;margin-bottom:4px">RED FLAGS</div><ul style="font-size:12px;color:#999;margin:0 0 10px 16px;padding:0">'+flags+'</ul>':'')+
+      (tasks?'<div style="font-size:10px;color:#F58025;font-weight:700;margin-bottom:4px">TODAY PRIORITIES</div><ul style="font-size:12px;color:#999;margin:0 0 10px 16px;padding:0">'+tasks+'</ul>':'')+
+      '<div style="font-size:10px;color:#555;margin-top:8px">Inbox: '+(b.inbox_unprocessed||0)+' &middot; Approvals: '+approvals+' &middot; Proposed: '+(b.skill_improvements_proposed||0)+'</div>'+
+    '</div>';
+  })
+  .catch(function(){});
+}
 
 /* --- JARVIS QUEUE (from Supabase) --- */
 function loadQueue(){
