@@ -285,6 +285,8 @@ function editTask(id,title,desc,pri,deadline,company){
   var pb=document.querySelector('#tpris .pc[data-v='+pri+']');if(pb)pb.classList.add('p'+pri[0]);
   var addBtn=el.querySelector('.add-form .btn');
   addBtn.textContent='Save';addBtn.setAttribute('onclick','saveEditTask(\''+id+'\')');
+  el.scrollIntoView({behavior:'smooth',block:'start'});
+  document.getElementById('tt').focus();
 }
 
 function saveEditTask(id){
