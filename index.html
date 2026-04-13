@@ -239,9 +239,21 @@ function closeAdd(e){e.stopPropagation();resetAddForm()}
 
 function deadlineInfo(d){if(!d)return{cls:'dl-none',txt:'No deadline'};var now=new Date();now.setHours(0,0,0,0);var dl=new Date(d+'T00:00:00');var diff=Math.ceil((dl-now)/(1000*60*60*24));if(diff<0)return{cls:'dl-over',txt:Math.abs(diff)+'d overdue'};if(diff===0)return{cls:'dl-over',txt:'Today'};if(diff===1)return{cls:'dl-soon',txt:'Tomorrow'};if(diff<=3)return{cls:'dl-soon',txt:diff+'d left'};return{cls:'dl-ok',txt:diff+'d left'}}
 
-function renderTask(t){var di=deadlineInfo(t.deadline);var isDone=t.status==='done';
-var esc=function(s){return s?s.replace(/'/g,'&#39;').replace(/"/g,'&quot;'):''};
-return '<div class="ti'+(isDone?' done':'')+'" data-id="'+t.id+'"><div class="ck" onclick="toggleTask(\''+t.id+'\','+(!isDone)+')">'+'</div><div class="info"><div class="title">'+t.title+'</div>'+(t.description?'<div class="desc">'+t.description+'</div>':'')+'<div class="meta"><span class="dl '+di.cls+'">'+di.txt+'</span><span class="badge badge-'+t.priority+'">'+t.priority+'</span>'+(t.company_hint?'<span class="badge badge-co">'+t.company_hint+'</span>':'')+'</div>'+(isDone?'':'<div style="margin-top:6px;display:flex;gap:6px"><span onclick="event.stopPropagation();editTask(\''+t.id+'\',\''+esc(t.title)+'\',\''+esc(t.description||'')+'\',\''+t.priority+'\',\''+(t.deadline||'')+'\',\''+(t.company_hint||'')+'\')" style="font-size:10px;color:#F58025;cursor:pointer;-webkit-tap-highlight-color:transparent">Edit</span><span onclick="event.stopPropagation();deleteTask(\''+t.id+'\')" style="font-size:10px;color:#f87171;cursor:pointer;-webkit-tap-highlight-color:transparent">Delete</span></div>')+'</div></div>'}
+var TASK_CACHE={};
+function hesc(s){return s?String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'):''}
+function renderTask(t){
+  TASK_CACHE[t.id]=t;
+  var di=deadlineInfo(t.deadline);var isDone=t.status==='done';
+  return '<div class="ti'+(isDone?' done':'')+'" data-id="'+t.id+'"><div class="ck" data-action="toggle" data-id="'+t.id+'" data-done="'+(!isDone)+'"></div><div class="info"><div class="title">'+hesc(t.title)+'</div>'+(t.description?'<div class="desc">'+hesc(t.description)+'</div>':'')+'<div class="meta"><span class="dl '+di.cls+'">'+di.txt+'</span><span class="badge badge-'+t.priority+'">'+t.priority+'</span>'+(t.company_hint?'<span class="badge badge-co">'+hesc(t.company_hint)+'</span>':'')+'</div>'+(isDone?'':'<div style="margin-top:6px;display:flex;gap:6px"><span data-action="edit" data-id="'+t.id+'" style="font-size:10px;color:#F58025;cursor:pointer;-webkit-tap-highlight-color:transparent">Edit</span><span data-action="delete" data-id="'+t.id+'" style="font-size:10px;color:#f87171;cursor:pointer;-webkit-tap-highlight-color:transparent">Delete</span></div>')+'</div></div>'
+}
+
+document.addEventListener('click',function(e){
+  var el=e.target.closest('[data-action]');if(!el)return;
+  var action=el.dataset.action;var id=el.dataset.id;
+  if(action==='toggle'){toggleTask(id,el.dataset.done==='true')}
+  else if(action==='edit'){e.stopPropagation();var t=TASK_CACHE[id];if(t)editTask(t.id,t.title||'',t.description||'',t.priority||'normal',t.deadline||'',t.company_hint||'')}
+  else if(action==='delete'){e.stopPropagation();deleteTask(id)}
+});
 
 function loadTasks(){
   fetch(SB+'/rest/v1/tasks?order=deadline.asc.nullslast,created_at.desc&limit=100',{headers:H}).then(function(r){return r.json()}).then(function(data){
