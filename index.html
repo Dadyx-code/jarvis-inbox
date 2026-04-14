@@ -543,7 +543,19 @@ setInterval(function(){if(document.getElementById('p-approvals').classList.conta
 /* preload badge */
 fetch(SB+'/rest/v1/approvals?select=id&status=eq.pending',{headers:H}).then(function(r){return r.json()}).then(function(data){if(data&&data.length){var b=document.getElementById('ap-badge');b.textContent=data.length;b.style.display='inline-block'}}).catch(function(){});
 
-if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){})}
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').then(function(reg){
+    // On new SW waiting, prompt it to activate and reload the page once
+    function promptUpdate(){if(reg.waiting){reg.waiting.postMessage('SKIP_WAITING')}}
+    if(reg.waiting) promptUpdate();
+    reg.addEventListener('updatefound',function(){
+      var nw=reg.installing;
+      if(nw) nw.addEventListener('statechange',function(){ if(nw.state==='installed' && navigator.serviceWorker.controller) promptUpdate(); });
+    });
+    var reloading=false;
+    navigator.serviceWorker.addEventListener('controllerchange',function(){ if(!reloading){reloading=true;location.reload()} });
+  }).catch(function(){})
+}
 </script>
 </body>
 </html>
