@@ -94,6 +94,7 @@ select:focus{outline:none;border-color:#F58025}
   <div class="tab on" data-p="inbox">Inbox</div>
   <div class="tab" data-p="tasks">Tasks</div>
   <div class="tab" data-p="content">Content</div>
+  <div class="tab" data-p="approvals">Approvals<span id="ap-badge" style="display:none;background:#f87171;color:#0f0d0a;font-size:9px;padding:1px 6px;border-radius:8px;margin-left:4px;font-weight:700;vertical-align:middle">0</span></div>
 </div>
 
 <!-- INBOX PAGE -->
@@ -160,6 +161,13 @@ select:focus{outline:none;border-color:#F58025}
 <div id="contentList"><div class="es">Loading...</div></div>
 </div>
 
+<!-- APPROVALS PAGE -->
+<div class="page" id="p-approvals">
+<div class="hdr"><h1>APPROVALS</h1><div class="sub" id="ap-count">Decisions waiting on you</div></div>
+<div id="st4" class="st"></div>
+<div id="apList"><div class="es">Loading...</div></div>
+</div>
+
 <script>
 var SB='https://swmtuepntjlkfzpvplsc.supabase.co';
 var SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN3bXR1ZXBudGpsa2Z6cHZwbHNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDk1MDMsImV4cCI6MjA5MDI4NTUwM30.0z2ow5b1k6dzv0pUiqyB9pfj60VPWB2tfox6gIp-pXo';
@@ -173,6 +181,7 @@ document.querySelectorAll('.tab').forEach(function(t){t.addEventListener('click'
   document.getElementById('p-'+t.dataset.p).classList.add('on');
   if(t.dataset.p==='tasks') loadTasks();
   if(t.dataset.p==='content') loadContent();
+  if(t.dataset.p==='approvals') loadApprovals();
 })});
 
 /* --- INBOX --- */
@@ -471,6 +480,68 @@ function copyPost(btn,id){
     }
   });
 }
+
+/* --- APPROVALS --- */
+function timeAgo(iso){var d=(Date.now()-new Date(iso).getTime())/1000;if(d<60)return'just now';if(d<3600)return Math.floor(d/60)+'m ago';if(d<86400)return Math.floor(d/3600)+'h ago';return Math.floor(d/86400)+'d ago'}
+
+function loadApprovals(){
+  fetch(SB+'/rest/v1/approvals?select=*&order=created_at.desc&limit=40',{headers:H})
+  .then(function(r){return r.json()})
+  .then(function(data){
+    var pending=data.filter(function(a){return a.status==='pending'});
+    var resolved=data.filter(function(a){return a.status!=='pending'}).slice(0,15);
+    document.getElementById('ap-count').textContent=pending.length+' pending';
+    var badge=document.getElementById('ap-badge');
+    if(pending.length){badge.textContent=pending.length;badge.style.display='inline-block'}else{badge.style.display='none'}
+    var el=document.getElementById('apList');
+    if(!data.length){el.innerHTML='<div class="es">No approvals yet. Jarvis will create outcome-check approvals for old decisions.</div>';return}
+    var s='';
+    if(pending.length){s+='<div class="section-label">Pending ('+pending.length+')</div>'+pending.map(apCard).join('')}
+    if(resolved.length){s+='<div class="section-label" style="margin-top:16px">Resolved</div>'+resolved.map(apCardDone).join('')}
+    el.innerHTML=s;
+  }).catch(function(e){document.getElementById('apList').innerHTML='<div class="es" style="color:#f87171">Failed: '+e.message+'</div>'})
+}
+
+function apCard(a){
+  var opts=Array.isArray(a.options)&&a.options.length?a.options:[{label:'Approve',value:'approved'},{label:'Reject',value:'rejected'}];
+  var html='<div class="hi" style="margin-bottom:10px">'+
+    '<div style="font-weight:600;font-size:14px;color:#e0e0e0;margin-bottom:6px">'+hesc(a.title||'')+'</div>'+
+    (a.description?'<div style="font-size:12px;color:#999;white-space:pre-line;line-height:1.5;margin-bottom:8px">'+hesc(a.description)+'</div>':'')+
+    '<div class="m" style="margin-bottom:8px"><span style="color:#F58025">pending</span><span>'+(a.priority||'normal')+'</span><span>'+timeAgo(a.created_at)+'</span></div>'+
+    '<input type="text" id="ap-note-'+a.id+'" placeholder="Optional note..." style="width:100%;background:#0f0d0a;border:1px solid #2a1a0a;border-radius:6px;color:#e0e0e0;font-size:12px;padding:8px;margin-bottom:8px;font-family:inherit">'+
+    '<div style="display:flex;gap:6px;flex-wrap:wrap">';
+  for(var i=0;i<opts.length;i++){
+    var o=opts[i];
+    var col=(o.value==='worked'||o.value==='approved')?'#4ade80':(o.value==='failed'||o.value==='rejected')?'#f87171':'#F58025';
+    html+='<button onclick="respondApproval(\''+a.id+'\',\''+o.value+'\')" style="flex:1;min-width:80px;background:#14120e;border:1px solid '+col+';color:'+col+';padding:10px 8px;border-radius:8px;font-size:12px;cursor:pointer;font-weight:600;-webkit-tap-highlight-color:transparent">'+hesc(o.label)+'</button>';
+  }
+  html+='</div></div>';
+  return html;
+}
+
+function apCardDone(a){
+  var col=(a.response==='worked'||a.response==='approved'||a.status==='approved')?'#4ade80':(a.response==='failed'||a.response==='rejected'||a.status==='rejected')?'#f87171':'#666';
+  return '<div class="hi" style="margin-bottom:8px;opacity:0.65">'+
+    '<div style="font-weight:500;font-size:13px;color:#ccc;margin-bottom:4px">'+hesc(a.title||'')+'</div>'+
+    '<div class="m"><span style="color:'+col+'">'+(a.response||a.status)+'</span><span>'+timeAgo(a.responded_at||a.created_at)+'</span></div>'+
+    (a.response_note?'<div style="font-size:11px;color:#666;margin-top:4px;font-style:italic">'+hesc(a.response_note)+'</div>':'')+
+    '</div>';
+}
+
+function respondApproval(id,value){
+  var noteEl=document.getElementById('ap-note-'+id);
+  var note=noteEl?noteEl.value.trim()||null:null;
+  var status=(value==='rejected'||value==='failed')?'rejected':'approved';
+  fetch(SB+'/rest/v1/approvals?id=eq.'+id,{method:'PATCH',headers:Object.assign({},H,{'Prefer':'return=minimal'}),body:JSON.stringify({status:status,response:value,response_note:note,responded_at:new Date().toISOString()})})
+  .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);if(navigator.vibrate)navigator.vibrate([40,40,40]);ss('st4','Recorded','ok');loadApprovals()})
+  .catch(function(e){ss('st4','Failed: '+e.message,'err')})
+}
+
+/* auto-refresh when on approvals tab */
+setInterval(function(){if(document.getElementById('p-approvals').classList.contains('on'))loadApprovals()},30000);
+
+/* preload badge */
+fetch(SB+'/rest/v1/approvals?select=id&status=eq.pending',{headers:H}).then(function(r){return r.json()}).then(function(data){if(data&&data.length){var b=document.getElementById('ap-badge');b.textContent=data.length;b.style.display='inline-block'}}).catch(function(){});
 
 if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){})}
 </script>
