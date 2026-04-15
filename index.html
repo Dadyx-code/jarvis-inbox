@@ -412,10 +412,21 @@ function loadContent(){
       s+='<span style="font-size:10px;padding:2px 8px;border-radius:10px;border:1px solid;white-space:nowrap;margin-left:8px;'+statusColor(p.status)+'">'+p.status+'</span>';
       s+='</div>';
 
+      var hasEdit=p.published_content&&p.published_content.length>0;
+      var displayContent=hasEdit?p.published_content:p.content;
       if(hasContent){
-        var preview=p.content.substring(0,120).replace(/\n/g,' ')+'...';
-        s+='<div style="font-size:12px;color:#666;margin-bottom:6px">'+preview+'</div>';
-        s+='<div id="'+pid+'" style="display:none;font-size:13px;color:#ccc;line-height:1.6;margin:10px 0;padding:12px;background:#0f0d0a;border-radius:8px;white-space:pre-line;border:1px solid #2a1a0a">'+p.content+'</div>';
+        var preview=displayContent.substring(0,120).replace(/\n/g,' ')+'...';
+        s+='<div style="font-size:12px;color:#666;margin-bottom:6px">'+preview+(hasEdit?' <span style="color:#60a5fa;font-size:9px">(edited)</span>':'')+'</div>';
+        s+='<div id="'+pid+'" style="display:none;font-size:13px;color:#ccc;line-height:1.6;margin:10px 0;padding:12px;background:#0f0d0a;border-radius:8px;white-space:pre-line;border:1px solid #2a1a0a">'+escHtml(displayContent)+(hasEdit?'<div style="margin-top:12px;padding-top:12px;border-top:1px dashed #2a1a0a;font-size:11px;color:#555"><div style="color:#60a5fa;margin-bottom:4px">ORIGINAL (what Jarvis wrote)</div>'+escHtml(p.content)+(p.edit_notes?'<div style="color:#60a5fa;margin:8px 0 4px">EDIT NOTES</div>'+escHtml(p.edit_notes):'')+'</div>':'')+'</div>';
+        s+='<div id="ed-'+pid+'" style="display:none;margin:10px 0;padding:14px;background:#0f0d0a;border-radius:8px;border:1px solid #1e3a5f" onclick="event.stopPropagation()">';
+        s+='<div style="font-size:10px;color:#60a5fa;margin-bottom:6px;letter-spacing:1px">FINAL (what you actually published)</div>';
+        s+='<textarea id="ta-'+pid+'" style="width:100%;min-height:180px;background:#0a0a0a;border:1px solid #2a1a0a;color:#e0e0e0;font-size:13px;padding:10px;border-radius:6px;font-family:inherit;resize:vertical">'+escHtml(hasEdit?p.published_content:p.content)+'</textarea>';
+        s+='<div style="font-size:10px;color:#60a5fa;margin:10px 0 6px;letter-spacing:1px">WHY YOU CHANGED IT (one line — trains the agent)</div>';
+        s+='<input type="text" id="nt-'+pid+'" placeholder="e.g. softened the hook, removed the Hormozi cliché, added a bar anecdote" value="'+escHtml(p.edit_notes||'')+'" style="width:100%;background:#0a0a0a;border:1px solid #2a1a0a;color:#e0e0e0;padding:10px;border-radius:6px;font-family:inherit;font-size:12px">';
+        s+='<div style="display:flex;gap:8px;margin-top:10px">';
+        s+='<button onclick="savePostEdit(this,\''+p.id+'\',\''+pid+'\')" style="background:#14120e;border:1px solid #4ade80;color:#4ade80;padding:8px 16px;border-radius:8px;font-size:12px;cursor:pointer;flex:1">Save final version</button>';
+        s+='<button onclick="closeEditor(\''+pid+'\')" style="background:#14120e;border:1px solid #333;color:#666;padding:8px 14px;border-radius:8px;font-size:12px;cursor:pointer">Cancel</button>';
+        s+='</div></div>';
       }
 
       s+='<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">';
@@ -434,9 +445,10 @@ function loadContent(){
         s+='</div>';
       }
 
-      s+='<div style="margin-top:8px;display:flex;gap:8px" onclick="event.stopPropagation()">';
-      if((p.status==='approved'||p.status==='draft')&&hasContent){
+      s+='<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap" onclick="event.stopPropagation()">';
+      if(hasContent){
         s+='<button onclick="copyPost(this,\''+p.id+'\')" style="background:#14120e;border:1px solid #F58025;color:#F58025;padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer">Copy</button>';
+        s+='<button onclick="openEditor(\''+pid+'\')" style="background:#14120e;border:1px solid #60a5fa;color:#60a5fa;padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer">Edit final</button>';
         if(p.status==='draft'){s+='<button onclick="approvePost(this,\''+p.id+'\')" style="background:#14120e;border:1px solid #4ade80;color:#4ade80;padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer">Approve</button>';}
       }
       s+='<button onclick="deletePost(this,\''+p.id+'\')" style="background:#14120e;border:1px solid #333;color:#666;padding:6px 10px;border-radius:8px;font-size:11px;cursor:pointer">X</button>';
@@ -451,6 +463,42 @@ function loadContent(){
 function togglePost(pid){
   var el=document.getElementById(pid);
   if(el){el.style.display=el.style.display==='none'?'block':'none'}
+}
+
+function escHtml(s){return (s||'').toString().replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+
+function openEditor(pid){
+  var ed=document.getElementById('ed-'+pid);
+  if(!ed)return;
+  ed.style.display='block';
+  var ta=document.getElementById('ta-'+pid);
+  if(ta)ta.focus();
+}
+
+function closeEditor(pid){
+  var ed=document.getElementById('ed-'+pid);
+  if(ed)ed.style.display='none';
+}
+
+function savePostEdit(btn,id,pid){
+  var ta=document.getElementById('ta-'+pid);
+  var nt=document.getElementById('nt-'+pid);
+  if(!ta)return;
+  var body={
+    published_content:ta.value,
+    edit_notes:nt?nt.value:null,
+    learning_processed:false,
+    updated_at:new Date().toISOString()
+  };
+  btn.disabled=true;btn.textContent='Saving...';
+  fetch(SB+'/rest/v1/linkedin_posts?id=eq.'+id,{method:'PATCH',headers:Object.assign({},H,{'Prefer':'return=minimal'}),body:JSON.stringify(body)})
+  .then(function(r){
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    btn.textContent='Saved';btn.style.background='#0a2e1a';
+    if(navigator.vibrate)navigator.vibrate(50);
+    setTimeout(function(){closeEditor(pid);loadContent()},600);
+  })
+  .catch(function(e){btn.disabled=false;btn.textContent='Save final version';alert('Error: '+e.message)})
 }
 
 function approvePost(btn,id){
