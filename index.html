@@ -217,7 +217,7 @@ function loadBriefing(){
     var dateStr=new Date(b.briefing_date).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'short'});
     var wins=(b.wins||[]).map(function(w){return '<li>'+esc(w)+'</li>'}).join('');
     var flags=(b.red_flags||[]).map(function(f){return '<li>'+esc(f)+'</li>'}).join('');
-    var tasks=(b.top_tasks||[]).slice(0,5).map(function(t){return '<li>'+esc(t.title||t)+'</li>'}).join('');
+    var tasks=(b.top_tasks||[]).slice(0,5).map(function(t){if(typeof t==='string')return '<li>'+esc(t)+'</li>';var label=t.action||t.title||t.task||'(untitled)';var pri=t.priority?' <span style="color:#F58025;font-weight:700">['+esc(t.priority)+']</span>':'';var dl=t.deadline?' <span style="color:#666">· '+esc(t.deadline)+'</span>':'';return '<li>'+esc(label)+pri+dl+'</li>'}).join('');
     var approvals=Array.isArray(b.needs_approval)?b.needs_approval.length:0;
     el.innerHTML='<div style="background:#14120e;border:1px solid #2a1a0a;border-left:3px solid #F58025;border-radius:10px;padding:14px;margin-bottom:12px">'+
       '<div style="font-size:10px;color:#F58025;font-weight:700;letter-spacing:1px;margin-bottom:6px">MORNING BRIEFING &middot; '+dateStr+'</div>'+
