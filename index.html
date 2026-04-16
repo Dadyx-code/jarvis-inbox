@@ -101,6 +101,7 @@ select:focus{outline:none;border-color:#F58025}
 <div class="page on" id="p-inbox">
 <div class="hdr"><h1>JARVIS INBOX</h1><div class="sub">Speak it. Send it. Jarvis remembers.</div></div>
 <div id="briefingCard"></div>
+<div id="overnightCard"></div>
 <div id="st" class="st"></div>
 <div class="ia"><textarea id="ct" placeholder="Tap here and speak with Wispr Flow, or type your idea..."></textarea></div>
 <div class="cg" id="cats"><div class="ch on" data-v="idea">Idea</div><div class="ch" data-v="task">Task</div><div class="ch" data-v="decision">Decision</div><div class="ch" data-v="note">Note</div></div>
@@ -203,7 +204,7 @@ document.getElementById('sb').addEventListener('click',function(){
   var project=document.getElementById('pr').value||null;
   fetch(SB+'/rest/v1/inbox',{method:'POST',headers:Object.assign({},H,{'Prefer':'return=minimal'}),body:JSON.stringify({content:content,category:cat,priority:pri,company_hint:company,project_hint:project})}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);ss('st','Sent! Jarvis will process this next session.','ok');svh(content,cat,pri,company);document.getElementById('ct').value='';if(navigator.vibrate)navigator.vibrate(50)}).catch(function(e){ss('st','Failed: '+e.message,'err')}).finally(function(){btn.disabled=false;btn.textContent='Send to Jarvis'})
 });
-rih();loadQueue();loadBriefing();
+rih();loadQueue();loadBriefing();loadOvernight();
 
 /* --- MORNING BRIEFING --- */
 function loadBriefing(){
@@ -229,6 +230,77 @@ function loadBriefing(){
     '</div>';
   })
   .catch(function(){});
+}
+
+/* --- OVERNIGHT MENU (approve/reject before sleep) --- */
+var _omId=null;
+function loadOvernight(){
+  var today=new Date();var tz=today.toLocaleDateString('sv-SE',{timeZone:'Europe/Zagreb'});
+  fetch(SB+'/rest/v1/overnight_menu?select=*&menu_date=eq.'+tz+'&limit=1',{headers:H})
+  .then(function(r){return r.json()})
+  .then(function(data){
+    var el=document.getElementById('overnightCard');
+    if(!data||!data.length||data[0].status!=='pending'){el.innerHTML='';return}
+    var m=data[0];_omId=m.id;
+    var items=m.proposed_items||[];
+    if(!items.length){el.innerHTML='';return}
+    var s='<div style="background:#14120e;border:1px solid #2a1a0a;border-left:3px solid #a78bfa;border-radius:10px;padding:14px;margin-bottom:12px">';
+    s+='<div style="font-size:10px;color:#a78bfa;font-weight:700;letter-spacing:1px;margin-bottom:8px">TONIGHT\'S MENU &middot; ~'+( m.total_estimated_minutes||'?')+' min</div>';
+    s+='<div style="font-size:12px;color:#888;margin-bottom:12px">Approve what Jarvis works on while you sleep. Unapproved = not executed.</div>';
+    for(var i=0;i<items.length;i++){
+      var it=items[i];
+      var pri=it.priority==='high'||it.priority==='urgent'?'color:#fb923c':'color:#888';
+      s+='<label style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid #1a1710;cursor:pointer;align-items:flex-start" onclick="event.stopPropagation()">';
+      s+='<input type="checkbox" checked class="om-check" data-idx="'+i+'" style="margin-top:3px;accent-color:#a78bfa;width:18px;height:18px">';
+      s+='<div style="flex:1"><div style="font-size:14px;font-weight:500;color:#e0e0e0">'+escHtml(it.title)+'</div>';
+      if(it.reason)s+='<div style="font-size:11px;color:#777;margin-top:2px">'+escHtml(it.reason)+'</div>';
+      s+='<div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap">';
+      if(it.agent_name)s+='<span style="font-size:9px;padding:2px 6px;border-radius:8px;background:#a78bfa22;color:#a78bfa;border:1px solid #a78bfa44">'+it.agent_name+'</span>';
+      if(it.task_kind)s+='<span style="font-size:9px;padding:2px 6px;border-radius:8px;background:#F5802522;color:#F58025;border:1px solid #F5802544">'+it.task_kind+'</span>';
+      s+='<span style="font-size:9px;'+pri+'">'+escHtml(it.priority||'normal')+'</span>';
+      if(it.estimated_minutes)s+='<span style="font-size:9px;color:#555">~'+it.estimated_minutes+' min</span>';
+      s+='</div></div></label>';
+    }
+    s+='<div style="display:flex;gap:8px;margin-top:14px">';
+    s+='<button onclick="approveMenu()" style="flex:1;background:#14120e;border:1px solid #4ade80;color:#4ade80;padding:12px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">Approve selected</button>';
+    s+='<button onclick="rejectMenu()" style="background:#14120e;border:1px solid #555;color:#666;padding:12px 16px;border-radius:8px;font-size:13px;cursor:pointer">Skip tonight</button>';
+    s+='</div></div>';
+    el.innerHTML=s;
+  }).catch(function(){});
+}
+
+function approveMenu(){
+  if(!_omId)return;
+  var checks=document.querySelectorAll('.om-check');
+  var approved=[];
+  fetch(SB+'/rest/v1/overnight_menu?id=eq.'+_omId+'&select=proposed_items',{headers:H})
+  .then(function(r){return r.json()})
+  .then(function(data){
+    if(!data||!data.length)return;
+    var items=data[0].proposed_items||[];
+    checks.forEach(function(cb){if(cb.checked)approved.push(items[parseInt(cb.dataset.idx)])});
+    var st=approved.length===0?'rejected':(approved.length===items.length?'approved':'partial');
+    return fetch(SB+'/rest/v1/overnight_menu?id=eq.'+_omId,{method:'PATCH',headers:Object.assign({},H,{'Prefer':'return=minimal'}),body:JSON.stringify({approved_items:approved,status:st,responded_at:new Date().toISOString(),updated_at:new Date().toISOString()})});
+  })
+  .then(function(r){
+    if(r&&!r.ok)throw new Error('HTTP '+r.status);
+    if(navigator.vibrate)navigator.vibrate(50);
+    var el=document.getElementById('overnightCard');
+    el.innerHTML='<div style="background:#0a2e1a;border:1px solid #166534;border-radius:10px;padding:14px;margin-bottom:12px;text-align:center;color:#4ade80;font-size:14px;font-weight:600">'+approved.length+' task'+(approved.length!==1?'s':'')+' approved for tonight. Sleep well.</div>';
+  })
+  .catch(function(e){alert('Error: '+e.message)});
+}
+
+function rejectMenu(){
+  if(!_omId)return;
+  if(!confirm('Skip all overnight work tonight?'))return;
+  fetch(SB+'/rest/v1/overnight_menu?id=eq.'+_omId,{method:'PATCH',headers:Object.assign({},H,{'Prefer':'return=minimal'}),body:JSON.stringify({approved_items:[],status:'rejected',responded_at:new Date().toISOString(),updated_at:new Date().toISOString()})})
+  .then(function(r){
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    if(navigator.vibrate)navigator.vibrate(30);
+    document.getElementById('overnightCard').innerHTML='<div style="background:#14120e;border:1px solid #333;border-radius:10px;padding:14px;margin-bottom:12px;text-align:center;color:#666;font-size:13px">Tonight: no work. Zero credits.</div>';
+  })
+  .catch(function(e){alert('Error: '+e.message)});
 }
 
 /* --- JARVIS QUEUE (from Supabase) --- */
