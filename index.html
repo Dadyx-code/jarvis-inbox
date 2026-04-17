@@ -114,6 +114,7 @@ select:focus{outline:none;border-color:#F58025}
 
 <!-- TASKS PAGE -->
 <div class="page" id="p-tasks">
+<div id="lpProjects"></div>
 <div class="hdr"><h1>TASKS</h1><div class="sub" id="task-count"></div></div>
 <div id="st2" class="st"></div>
 
@@ -180,7 +181,7 @@ document.querySelectorAll('.tab').forEach(function(t){t.addEventListener('click'
   document.querySelectorAll('.page').forEach(function(x){x.classList.remove('on')});
   t.classList.add('on');
   document.getElementById('p-'+t.dataset.p).classList.add('on');
-  if(t.dataset.p==='tasks') loadTasks();
+  if(t.dataset.p==='tasks'){loadTasks();loadLPProjects()}
   if(t.dataset.p==='content') loadContent();
   if(t.dataset.p==='approvals') loadApprovals();
 })});
@@ -336,6 +337,65 @@ function markProcessed(id,el){
   fetch(SB+'/rest/v1/inbox?id=eq.'+id,{method:'PATCH',headers:Object.assign({},H,{'Prefer':'return=minimal'}),body:JSON.stringify({processed:true,processed_at:new Date().toISOString()})})
   .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);if(navigator.vibrate)navigator.vibrate(30);setTimeout(loadQueue,300)})
   .catch(function(e){card.style.opacity='1';alert('Error: '+e.message)})
+}
+
+/* --- LP PROJECTS (phased landing pages) --- */
+var phaseNames=['','Intake','Research','Copy Brief','Write Copy','Design Brief','Build Page','Launch'];
+var phaseColors=['','#888','#a78bfa','#F58025','#fb923c','#60a5fa','#4ade80','#f87171'];
+
+function loadLPProjects(){
+  fetch(SB+'/rest/v1/lp_next_actions?select=*&order=name',{headers:H})
+  .then(function(r){return r.json()})
+  .then(function(data){
+    var el=document.getElementById('lpProjects');
+    if(!data||!data.length){el.innerHTML='';return}
+    var s='<div style="margin-bottom:16px">';
+    s+='<div style="font-size:10px;color:#a78bfa;font-weight:700;letter-spacing:1px;margin-bottom:10px;padding-left:4px">LANDING PAGES</div>';
+    for(var i=0;i<data.length;i++){
+      var p=data[i];
+      var pct=Math.round(((p.current_phase-1)/7)*100);
+      var pcolor=phaseColors[p.current_phase]||'#888';
+      var actionLabel=p.next_action==='await_approval'?'Awaiting your approval':p.next_action==='advance'?'Ready to advance':(p.assigned_agent||'')+(p.overnight_safe?' (overnight OK)':' (session)');
+      s+='<div style="background:#14120e;border:1px solid #2a1a0a;border-left:3px solid '+pcolor+';border-radius:10px;padding:14px;margin-bottom:8px">';
+      s+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">';
+      s+='<div style="font-weight:600;font-size:15px;color:#e0e0e0">'+escHtml(p.name)+'</div>';
+      s+='<span style="font-size:10px;padding:2px 8px;border-radius:10px;border:1px solid '+pcolor+';color:'+pcolor+'">Phase '+p.current_phase+'/7</span>';
+      s+='</div>';
+      // progress bar
+      s+='<div style="background:#1a1710;border-radius:4px;height:6px;margin-bottom:8px;overflow:hidden">';
+      s+='<div style="width:'+pct+'%;height:100%;background:'+pcolor+';border-radius:4px;transition:width .3s"></div></div>';
+      // phase label + action
+      s+='<div style="display:flex;justify-content:space-between;align-items:center">';
+      s+='<span style="font-size:12px;color:'+pcolor+'">'+phaseNames[p.current_phase]+'</span>';
+      s+='<span style="font-size:11px;color:#888">'+escHtml(actionLabel)+'</span>';
+      s+='</div>';
+      // approval button if awaiting
+      if(p.next_action==='await_approval'){
+        s+='<div style="margin-top:10px;display:flex;gap:8px" onclick="event.stopPropagation()">';
+        s+='<button onclick="approveLPPhase(\''+p.id+'\','+p.current_phase+')" style="flex:1;background:#14120e;border:1px solid #4ade80;color:#4ade80;padding:10px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Approve Phase '+p.current_phase+'</button>';
+        s+='</div>';
+      }
+      s+='</div>';
+    }
+    s+='</div>';
+    el.innerHTML=s;
+  }).catch(function(){});
+}
+
+function approveLPPhase(projectId,phase){
+  var approveCol='phase_'+phase+'_approved';
+  var approveAtCol='phase_'+phase+'_approved_at';
+  var body={};
+  body[approveCol]=true;
+  body[approveAtCol]=new Date().toISOString();
+  body.current_phase=phase+1;
+  body.updated_at=new Date().toISOString();
+  fetch(SB+'/rest/v1/lp_projects?id=eq.'+projectId,{method:'PATCH',headers:Object.assign({},H,{'Prefer':'return=minimal'}),body:JSON.stringify(body)})
+  .then(function(r){
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    if(navigator.vibrate)navigator.vibrate(50);
+    loadLPProjects();
+  }).catch(function(e){alert('Phase gate error: '+e.message)});
 }
 
 /* --- TASKS --- */
