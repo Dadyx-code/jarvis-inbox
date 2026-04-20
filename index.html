@@ -581,6 +581,7 @@ function loadContent(){
       if(hasContent){
         s+='<button onclick="copyPost(this,\''+p.id+'\')" style="background:#14120e;border:1px solid #F58025;color:#F58025;padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer">Copy</button>';
         s+='<button onclick="openEditor(\''+pid+'\')" style="background:#14120e;border:1px solid #60a5fa;color:#60a5fa;padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer">Edit final</button>';
+        if(p.status!=='published'){s+='<button onclick="publishPost(this,\''+p.id+'\')" style="background:#14120e;border:1px solid #a78bfa;color:#a78bfa;padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer">Objavljeno</button>';}
         if(p.status==='draft'){s+='<button onclick="approvePost(this,\''+p.id+'\')" style="background:#14120e;border:1px solid #4ade80;color:#4ade80;padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer">Approve</button>';}
       }
       s+='<button onclick="deletePost(this,\''+p.id+'\')" style="background:#14120e;border:1px solid #333;color:#666;padding:6px 10px;border-radius:8px;font-size:11px;cursor:pointer">X</button>';
@@ -636,6 +637,13 @@ function savePostEdit(btn,id,pid){
 function approvePost(btn,id){
   fetch(SB+'/rest/v1/linkedin_posts?id=eq.'+id,{method:'PATCH',headers:Object.assign({},H,{'Prefer':'return=minimal'}),body:JSON.stringify({status:'approved',updated_at:new Date().toISOString()})})
   .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);btn.textContent='Approved!';btn.style.borderColor='#4ade80';btn.style.color='#4ade80';if(navigator.vibrate)navigator.vibrate(50);setTimeout(loadContent,500)})
+  .catch(function(e){alert('Error: '+e.message)})
+}
+
+function publishPost(btn,id){
+  if(!confirm('Označiti ovaj post kao objavljen?'))return;
+  fetch(SB+'/rest/v1/linkedin_posts?id=eq.'+id,{method:'PATCH',headers:Object.assign({},H,{'Prefer':'return=minimal'}),body:JSON.stringify({status:'published',published_at:new Date().toISOString(),updated_at:new Date().toISOString()})})
+  .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);btn.textContent='Objavljeno!';btn.style.borderColor='#4ade80';btn.style.color='#4ade80';if(navigator.vibrate)navigator.vibrate(50);setTimeout(loadContent,500)})
   .catch(function(e){alert('Error: '+e.message)})
 }
 
