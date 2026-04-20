@@ -568,13 +568,29 @@ function loadContent(){
       s+='<span style="font-size:9px;color:#444">'+ds+'</span>';
       s+='</div>';
 
-      if(p.status==='published'&&(p.impressions||p.comments||p.reactions)){
-        s+='<div style="margin-top:6px;display:flex;gap:10px">';
-        if(p.impressions) s+='<span style="font-size:11px;color:#F58025">'+p.impressions.toLocaleString()+' views</span>';
-        if(p.reactions) s+='<span style="font-size:11px;color:#4ade80">'+p.reactions+' reactions</span>';
-        if(p.comments) s+='<span style="font-size:11px;color:#fb923c">'+p.comments+' comments</span>';
-        if(p.reposts) s+='<span style="font-size:11px;color:#60a5fa">'+p.reposts+' reposts</span>';
+      if(p.status==='published'){
+        var hasStats=p.impressions||p.comments||p.reactions;
+        if(hasStats){
+          s+='<div style="margin-top:6px;display:flex;gap:10px">';
+          if(p.impressions) s+='<span style="font-size:11px;color:#F58025">'+p.impressions.toLocaleString()+' views</span>';
+          if(p.reactions) s+='<span style="font-size:11px;color:#4ade80">'+p.reactions+' reactions</span>';
+          if(p.comments) s+='<span style="font-size:11px;color:#fb923c">'+p.comments+' comments</span>';
+          if(p.reposts) s+='<span style="font-size:11px;color:#60a5fa">'+p.reposts+' reposts</span>';
+          s+='</div>';
+        }
+        var sid='stats-'+p.id.substring(0,8);
+        s+='<div id="'+sid+'" style="display:none;margin-top:8px;padding:12px;background:#0f0d0a;border:1px solid #2a1a0a;border-radius:8px" onclick="event.stopPropagation()">';
+        s+='<div style="font-size:10px;color:#F58025;margin-bottom:8px;letter-spacing:1px">STATISTIKE</div>';
+        s+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
+        s+='<div><label style="font-size:10px;color:#666">Impressions</label><input type="number" id="si-'+sid+'" value="'+(p.impressions||'')+'" placeholder="0" style="width:100%;background:#0a0a0a;border:1px solid #2a1a0a;color:#e0e0e0;padding:8px;border-radius:6px;font-size:13px"></div>';
+        s+='<div><label style="font-size:10px;color:#666">Reactions</label><input type="number" id="sr-'+sid+'" value="'+(p.reactions||'')+'" placeholder="0" style="width:100%;background:#0a0a0a;border:1px solid #2a1a0a;color:#e0e0e0;padding:8px;border-radius:6px;font-size:13px"></div>';
+        s+='<div><label style="font-size:10px;color:#666">Comments</label><input type="number" id="sc-'+sid+'" value="'+(p.comments||'')+'" placeholder="0" style="width:100%;background:#0a0a0a;border:1px solid #2a1a0a;color:#e0e0e0;padding:8px;border-radius:6px;font-size:13px"></div>';
+        s+='<div><label style="font-size:10px;color:#666">Reposts</label><input type="number" id="sp-'+sid+'" value="'+(p.reposts||'')+'" placeholder="0" style="width:100%;background:#0a0a0a;border:1px solid #2a1a0a;color:#e0e0e0;padding:8px;border-radius:6px;font-size:13px"></div>';
         s+='</div>';
+        s+='<div style="display:flex;gap:8px;margin-top:10px">';
+        s+='<button onclick="saveStats(this,\''+p.id+'\',\''+sid+'\')" style="flex:1;background:#14120e;border:1px solid #4ade80;color:#4ade80;padding:8px;border-radius:8px;font-size:12px;cursor:pointer">Spremi</button>';
+        s+='<button onclick="document.getElementById(\''+sid+'\').style.display=\'none\'" style="background:#14120e;border:1px solid #333;color:#666;padding:8px 14px;border-radius:8px;font-size:12px;cursor:pointer">X</button>';
+        s+='</div></div>';
       }
 
       s+='<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap" onclick="event.stopPropagation()">';
@@ -582,6 +598,7 @@ function loadContent(){
         s+='<button onclick="copyPost(this,\''+p.id+'\')" style="background:#14120e;border:1px solid #F58025;color:#F58025;padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer">Copy</button>';
         s+='<button onclick="openEditor(\''+pid+'\')" style="background:#14120e;border:1px solid #60a5fa;color:#60a5fa;padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer">Edit final</button>';
         if(p.status!=='published'){s+='<button onclick="publishPost(this,\''+p.id+'\')" style="background:#14120e;border:1px solid #a78bfa;color:#a78bfa;padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer">Objavljeno</button>';}
+        if(p.status==='published'){s+='<button onclick="document.getElementById(\'stats-'+p.id.substring(0,8)+'\').style.display=document.getElementById(\'stats-'+p.id.substring(0,8)+'\').style.display===\'none\'?\'block\':\'none\'" style="background:#14120e;border:1px solid #F58025;color:#F58025;padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer">Statistike</button>';}
         if(p.status==='draft'){s+='<button onclick="approvePost(this,\''+p.id+'\')" style="background:#14120e;border:1px solid #4ade80;color:#4ade80;padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer">Approve</button>';}
       }
       s+='<button onclick="deletePost(this,\''+p.id+'\')" style="background:#14120e;border:1px solid #333;color:#666;padding:6px 10px;border-radius:8px;font-size:11px;cursor:pointer">X</button>';
@@ -638,6 +655,17 @@ function approvePost(btn,id){
   fetch(SB+'/rest/v1/linkedin_posts?id=eq.'+id,{method:'PATCH',headers:Object.assign({},H,{'Prefer':'return=minimal'}),body:JSON.stringify({status:'approved',updated_at:new Date().toISOString()})})
   .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);btn.textContent='Approved!';btn.style.borderColor='#4ade80';btn.style.color='#4ade80';if(navigator.vibrate)navigator.vibrate(50);setTimeout(loadContent,500)})
   .catch(function(e){alert('Error: '+e.message)})
+}
+
+function saveStats(btn,id,sid){
+  var imp=parseInt(document.getElementById('si-'+sid).value)||null;
+  var rea=parseInt(document.getElementById('sr-'+sid).value)||null;
+  var com=parseInt(document.getElementById('sc-'+sid).value)||null;
+  var rep=parseInt(document.getElementById('sp-'+sid).value)||null;
+  btn.disabled=true;btn.textContent='Saving...';
+  fetch(SB+'/rest/v1/linkedin_posts?id=eq.'+id,{method:'PATCH',headers:Object.assign({},H,{'Prefer':'return=minimal'}),body:JSON.stringify({impressions:imp,reactions:rea,comments:com,reposts:rep,updated_at:new Date().toISOString()})})
+  .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);btn.textContent='Spremljeno!';btn.style.background='#0a2e1a';if(navigator.vibrate)navigator.vibrate(50);setTimeout(function(){document.getElementById(sid).style.display='none';loadContent()},600)})
+  .catch(function(e){btn.disabled=false;btn.textContent='Spremi';alert('Error: '+e.message)})
 }
 
 function publishPost(btn,id){
