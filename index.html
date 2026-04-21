@@ -701,6 +701,9 @@ function copyPost(btn,id){
 function timeAgo(iso){var d=(Date.now()-new Date(iso).getTime())/1000;if(d<60)return'just now';if(d<3600)return Math.floor(d/60)+'m ago';if(d<86400)return Math.floor(d/3600)+'h ago';return Math.floor(d/86400)+'d ago'}
 
 function loadApprovals(){
+  // Skip re-render if user is typing in any approval note
+  var active=document.activeElement;
+  if(active && active.id && active.id.indexOf('ap-note-')===0) return;
   fetch(SB+'/rest/v1/approvals?select=*&order=created_at.desc&limit=40',{headers:H})
   .then(function(r){return r.json()})
   .then(function(data){
@@ -715,6 +718,11 @@ function loadApprovals(){
     if(pending.length){s+='<div class="section-label">Pending ('+pending.length+')</div>'+pending.map(apCard).join('')}
     if(resolved.length){s+='<div class="section-label" style="margin-top:16px">Resolved</div>'+resolved.map(apCardDone).join('')}
     el.innerHTML=s;
+    // Restore any drafts saved in localStorage
+    pending.forEach(function(a){
+      var draft=localStorage.getItem('ap-draft-'+a.id);
+      if(draft){var inp=document.getElementById('ap-note-'+a.id);if(inp)inp.value=draft}
+    });
   }).catch(function(e){document.getElementById('apList').innerHTML='<div class="es" style="color:#f87171">Failed: '+e.message+'</div>'})
 }
 
@@ -724,7 +732,7 @@ function apCard(a){
     '<div style="font-weight:600;font-size:14px;color:#e0e0e0;margin-bottom:6px">'+hesc(a.title||'')+'</div>'+
     (a.description?'<div style="font-size:12px;color:#999;white-space:pre-line;line-height:1.5;margin-bottom:8px">'+hesc(a.description)+'</div>':'')+
     '<div class="m" style="margin-bottom:8px"><span style="color:#F58025">pending</span><span>'+(a.priority||'normal')+'</span><span>'+timeAgo(a.created_at)+'</span></div>'+
-    '<input type="text" id="ap-note-'+a.id+'" placeholder="Optional note..." style="width:100%;background:#0f0d0a;border:1px solid #2a1a0a;border-radius:6px;color:#e0e0e0;font-size:12px;padding:8px;margin-bottom:8px;font-family:inherit">'+
+    '<textarea id="ap-note-'+a.id+'" placeholder="Optional note (Enter to approve, Shift+Enter for new line)..." rows="2" oninput="localStorage.setItem(\'ap-draft-'+a.id+'\',this.value)" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();respondApproval(\''+a.id+'\',\'approved\')}" style="width:100%;background:#0f0d0a;border:1px solid #2a1a0a;border-radius:6px;color:#e0e0e0;font-size:12px;padding:8px;margin-bottom:8px;font-family:inherit;resize:vertical;box-sizing:border-box"></textarea>'+
     '<div style="display:flex;gap:6px;flex-wrap:wrap">';
   for(var i=0;i<opts.length;i++){
     var o=opts[i];
@@ -749,7 +757,7 @@ function respondApproval(id,value){
   var note=noteEl?noteEl.value.trim()||null:null;
   var status=(value==='rejected'||value==='failed')?'rejected':'approved';
   fetch(SB+'/rest/v1/approvals?id=eq.'+id,{method:'PATCH',headers:Object.assign({},H,{'Prefer':'return=minimal'}),body:JSON.stringify({status:status,response:value,response_note:note,responded_at:new Date().toISOString()})})
-  .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);if(navigator.vibrate)navigator.vibrate([40,40,40]);ss('st4','Recorded','ok');loadApprovals()})
+  .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);localStorage.removeItem('ap-draft-'+id);if(navigator.vibrate)navigator.vibrate([40,40,40]);ss('st4','Recorded','ok');loadApprovals()})
   .catch(function(e){ss('st4','Failed: '+e.message,'err')})
 }
 

@@ -1,5 +1,5 @@
-// Jarvis SW v3 — network-first for HTML so Dario always gets fresh code
-const CACHE = 'jarvis-v3';
+// Jarvis SW v4 — fixed approval note (textarea, draft persistence, Enter to approve)
+const CACHE = 'jarvis-v4';
 
 self.addEventListener('install', function(e) {
   self.skipWaiting();
