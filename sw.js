@@ -1,5 +1,5 @@
-// Jarvis SW v4 — fixed approval note (textarea, draft persistence, Enter to approve)
-const CACHE = 'jarvis-v4';
+// Jarvis SW v5 — Sprint Y: Devices telemetry tab
+const CACHE = 'jarvis-v5';
 
 self.addEventListener('install', function(e) {
   self.skipWaiting();

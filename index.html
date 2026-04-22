@@ -95,6 +95,7 @@ select:focus{outline:none;border-color:#F58025}
   <div class="tab" data-p="tasks">Tasks</div>
   <div class="tab" data-p="content">Content</div>
   <div class="tab" data-p="approvals">Approvals<span id="ap-badge" style="display:none;background:#f87171;color:#0f0d0a;font-size:9px;padding:1px 6px;border-radius:8px;margin-left:4px;font-weight:700;vertical-align:middle">0</span></div>
+  <div class="tab" data-p="devices">Devices<span id="dv-badge" style="display:none;background:#fb923c;color:#0f0d0a;font-size:9px;padding:1px 6px;border-radius:8px;margin-left:4px;font-weight:700;vertical-align:middle">0</span></div>
 </div>
 
 <!-- INBOX PAGE -->
@@ -170,6 +171,19 @@ select:focus{outline:none;border-color:#F58025}
 <div id="apList"><div class="es">Loading...</div></div>
 </div>
 
+<!-- DEVICES PAGE -->
+<div class="page" id="p-devices">
+<div class="hdr"><h1>DEVICES</h1><div class="sub" id="dv-sub">Jarvis OS telemetry &middot; Sprint X v2</div></div>
+<div id="st5" class="st"></div>
+<div id="dvSync"><div class="es">Loading sync state...</div></div>
+<div class="section-label" style="margin-top:16px">Devices</div>
+<div id="dvList"><div class="es">Loading...</div></div>
+<div class="section-label" style="margin-top:16px">Drift events (last 7 days)</div>
+<div id="dvDrift"><div class="es">Loading...</div></div>
+<button class="btn" id="dvForceBtn" style="margin-top:16px" onclick="forceSync()">Force sync from git now</button>
+<div style="font-size:11px;color:#555;text-align:center;margin-top:8px;line-height:1.5">Pulls canonical HEAD from Dadyx-code/dadyx-skills into registry.<br>Tap if a device shows drift or sync looks stale.</div>
+</div>
+
 <script>
 var SB='https://swmtuepntjlkfzpvplsc.supabase.co';
 var SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN3bXR1ZXBudGpsa2Z6cHZwbHNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDk1MDMsImV4cCI6MjA5MDI4NTUwM30.0z2ow5b1k6dzv0pUiqyB9pfj60VPWB2tfox6gIp-pXo';
@@ -184,6 +198,7 @@ document.querySelectorAll('.tab').forEach(function(t){t.addEventListener('click'
   if(t.dataset.p==='tasks'){loadTasks();loadLPProjects()}
   if(t.dataset.p==='content') loadContent();
   if(t.dataset.p==='approvals') loadApprovals();
+  if(t.dataset.p==='devices') loadDevices();
 })});
 
 /* --- INBOX --- */
@@ -766,6 +781,129 @@ setInterval(function(){if(document.getElementById('p-approvals').classList.conta
 
 /* preload badge */
 fetch(SB+'/rest/v1/approvals?select=id&status=eq.pending',{headers:H}).then(function(r){return r.json()}).then(function(data){if(data&&data.length){var b=document.getElementById('ap-badge');b.textContent=data.length;b.style.display='inline-block'}}).catch(function(){});
+
+/* --- DEVICES --- */
+function healthColor(h){return h==='green'?'#4ade80':h==='yellow'?'#fb923c':h==='red'?'#f87171':'#888'}
+function healthBg(h){return h==='green'?'#0a2e1a':h==='yellow'?'#2e1a0a':h==='red'?'#2e0a0a':'#14120e'}
+function shortSha(s){return s?String(s).substring(0,7):'—'}
+function shortFp(s){return s?String(s).substring(0,10)+'…':'—'}
+
+function loadDevices(){
+  var since=new Date(Date.now()-14*86400*1000).toISOString();
+  var driftSince=new Date(Date.now()-7*86400*1000).toISOString();
+  Promise.all([
+    fetch(SB+'/rest/v1/registry_sync_state?select=*',{headers:H}).then(function(r){return r.json()}),
+    fetch(SB+'/rest/v1/device_sessions?select=device_slug,hostname,os,last_heartbeat_at,started_at,health,skills_fingerprint,hook_fingerprint,git_sha_at_boot,drift_detected,actions_taken&last_heartbeat_at=gte.'+since+'&order=last_heartbeat_at.desc&limit=100',{headers:H}).then(function(r){return r.json()}),
+    fetch(SB+'/rest/v1/device_sessions?select=device_slug,hostname,last_heartbeat_at,health,drift_detected&last_heartbeat_at=gte.'+driftSince+'&order=last_heartbeat_at.desc&limit=50',{headers:H}).then(function(r){return r.json()})
+  ]).then(function(results){
+    renderSyncState(results[0]);
+    renderDeviceList(results[1]||[]);
+    renderDriftEvents(results[2]||[]);
+  }).catch(function(e){
+    document.getElementById('dvList').innerHTML='<div class="es" style="color:#f87171">Failed: '+e.message+'</div>';
+  });
+}
+
+function renderSyncState(rows){
+  var el=document.getElementById('dvSync');
+  if(!rows||!rows.length){el.innerHTML='<div class="es">No sync state recorded yet</div>';return}
+  var s=rows[0];
+  var ok=!s.last_error;
+  var col=ok?'#4ade80':'#f87171';
+  var ageMin=Math.floor((Date.now()-new Date(s.last_synced_at).getTime())/60000);
+  var ageLabel=ageMin<60?ageMin+'m ago':ageMin<1440?Math.floor(ageMin/60)+'h ago':Math.floor(ageMin/1440)+'d ago';
+  var stale=ageMin>180;
+  var html='<div style="background:#14120e;border:1px solid #2a1a0a;border-left:3px solid '+col+';border-radius:10px;padding:14px">';
+  html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">';
+  html+='<div style="font-weight:600;font-size:14px;color:#e0e0e0">Cloud registry</div>';
+  html+='<span style="font-size:10px;padding:2px 8px;border-radius:10px;border:1px solid '+col+';color:'+col+'">'+(ok?'synced':'error')+'</span>';
+  html+='</div>';
+  html+='<div style="font-size:11px;color:#888;line-height:1.6">';
+  html+='<div><span style="color:#555">repo</span> &middot; '+hesc(s.repo||'—')+'</div>';
+  html+='<div><span style="color:#555">sha</span> &middot; <code style="color:#F58025;font-size:11px">'+shortSha(s.last_synced_sha)+'</code></div>';
+  html+='<div><span style="color:#555">skills</span> &middot; '+(s.last_skill_count||0)+' files</div>';
+  html+='<div><span style="color:#555">synced</span> &middot; '+ageLabel+(stale?' <span style="color:#fb923c">(stale)</span>':'')+'</div>';
+  if(s.last_error)html+='<div style="margin-top:6px;color:#f87171">'+hesc(s.last_error)+'</div>';
+  html+='</div></div>';
+  el.innerHTML=html;
+}
+
+function renderDeviceList(rows){
+  var el=document.getElementById('dvList');
+  if(!rows.length){el.innerHTML='<div class="es">No device sessions in last 14 days</div>';return}
+  // Dedupe by device_slug, keep most recent (rows already ordered desc)
+  var seen={};var devices=[];
+  for(var i=0;i<rows.length;i++){var d=rows[i];if(!seen[d.device_slug]){seen[d.device_slug]=1;devices.push(d)}}
+  var s='';
+  for(var j=0;j<devices.length;j++){
+    var d=devices[j];
+    var col=healthColor(d.health);
+    var bg=healthBg(d.health);
+    var ageMin=Math.floor((Date.now()-new Date(d.last_heartbeat_at).getTime())/60000);
+    var ageLabel=ageMin<1?'just now':ageMin<60?ageMin+'m ago':ageMin<1440?Math.floor(ageMin/60)+'h ago':Math.floor(ageMin/1440)+'d ago';
+    var driftCount=Array.isArray(d.drift_detected)?d.drift_detected.length:0;
+    var actionCount=Array.isArray(d.actions_taken)?d.actions_taken.length:0;
+    s+='<div style="background:#14120e;border:1px solid #2a1a0a;border-left:3px solid '+col+';border-radius:10px;padding:14px;margin-bottom:8px">';
+    s+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">';
+    s+='<div style="font-weight:600;font-size:15px;color:#e0e0e0">'+hesc(d.device_slug)+'</div>';
+    s+='<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:'+bg+';border:1px solid '+col+';color:'+col+'">'+(d.health||'unknown')+'</span>';
+    s+='</div>';
+    s+='<div style="font-size:11px;color:#888;line-height:1.6">';
+    s+='<div><span style="color:#555">host</span> &middot; '+hesc(d.hostname||'—')+' ('+hesc(d.os||'?')+')</div>';
+    s+='<div><span style="color:#555">last boot</span> &middot; '+ageLabel+'</div>';
+    s+='<div><span style="color:#555">git sha</span> &middot; <code style="color:#F58025;font-size:11px">'+shortSha(d.git_sha_at_boot)+'</code></div>';
+    s+='<div><span style="color:#555">skills fp</span> &middot; <code style="font-size:10px;color:#888">'+shortFp(d.skills_fingerprint)+'</code></div>';
+    if(driftCount)s+='<div style="color:#fb923c">&#9888; '+driftCount+' drift signal'+(driftCount!==1?'s':'')+' on this boot</div>';
+    if(actionCount)s+='<div style="color:#4ade80">&#10003; '+actionCount+' auto-heal action'+(actionCount!==1?'s':'')+' taken</div>';
+    s+='</div></div>';
+  }
+  el.innerHTML=s;
+}
+
+function renderDriftEvents(rows){
+  var el=document.getElementById('dvDrift');
+  var badge=document.getElementById('dv-badge');
+  var events=rows.filter(function(r){return Array.isArray(r.drift_detected)&&r.drift_detected.length>0});
+  if(!events.length){el.innerHTML='<div class="es">No drift in last 7 days &middot; everything aligned</div>';badge.style.display='none';return}
+  badge.textContent=events.length;badge.style.display='inline-block';
+  var s='';
+  var max=Math.min(events.length,15);
+  for(var i=0;i<max;i++){
+    var e=events[i];
+    var ts=new Date(e.last_heartbeat_at);
+    var tsStr=ts.toLocaleDateString('hr-HR')+' '+ts.toLocaleTimeString('hr-HR',{hour:'2-digit',minute:'2-digit'});
+    var types=e.drift_detected.map(function(d){return d.type||'unknown'}).join(', ');
+    s+='<div style="background:#14120e;border:1px solid #2a1a0a;border-left:2px solid #fb923c;border-radius:8px;padding:10px;margin-bottom:6px;font-size:12px">';
+    s+='<div style="display:flex;justify-content:space-between;color:#e0e0e0"><span>'+hesc(e.device_slug)+'</span><span style="color:#555;font-size:11px">'+tsStr+'</span></div>';
+    s+='<div style="color:#fb923c;font-size:11px;margin-top:3px">'+hesc(types)+'</div>';
+    var details=e.drift_detected.map(function(d){return d.detail||''}).filter(Boolean);
+    if(details.length)s+='<div style="color:#888;font-size:11px;margin-top:3px;line-height:1.5">'+hesc(details.join(' &middot; '))+'</div>';
+    s+='</div>';
+  }
+  if(events.length>max)s+='<div class="es" style="font-size:11px">+ '+(events.length-max)+' older event'+(events.length-max!==1?'s':'')+'</div>';
+  el.innerHTML=s;
+}
+
+function forceSync(){
+  var btn=document.getElementById('dvForceBtn');
+  btn.disabled=true;btn.textContent='Syncing...';
+  ss('st5','Pulling git HEAD into registry...','wait');
+  fetch(SB+'/rest/v1/rpc/jarvis_sync_skills_from_git',{method:'POST',headers:H,body:JSON.stringify({force_sync:true,trigger_label:'pwa-manual'})})
+  .then(function(r){if(!r.ok)return r.text().then(function(t){throw new Error('HTTP '+r.status+' '+t)});return r.json()})
+  .then(function(){ss('st5','Sync complete','ok');if(navigator.vibrate)navigator.vibrate(50);loadDevices()})
+  .catch(function(e){ss('st5','Sync failed: '+e.message,'err')})
+  .finally(function(){btn.disabled=false;btn.textContent='Force sync from git now'});
+}
+
+/* preload drift badge */
+(function(){
+  var driftSince=new Date(Date.now()-7*86400*1000).toISOString();
+  fetch(SB+'/rest/v1/device_sessions?select=drift_detected&last_heartbeat_at=gte.'+driftSince+'&limit=50',{headers:H})
+  .then(function(r){return r.json()}).then(function(data){
+    var n=(data||[]).filter(function(r){return Array.isArray(r.drift_detected)&&r.drift_detected.length>0}).length;
+    if(n){var b=document.getElementById('dv-badge');b.textContent=n;b.style.display='inline-block'}
+  }).catch(function(){});
+})();
 
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('sw.js').then(function(reg){
