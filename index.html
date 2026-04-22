@@ -95,7 +95,7 @@ select:focus{outline:none;border-color:#F58025}
   <div class="tab" data-p="tasks">Tasks</div>
   <div class="tab" data-p="content">Content</div>
   <div class="tab" data-p="approvals">Approvals<span id="ap-badge" style="display:none;background:#f87171;color:#0f0d0a;font-size:9px;padding:1px 6px;border-radius:8px;margin-left:4px;font-weight:700;vertical-align:middle">0</span></div>
-  <div class="tab" data-p="devices">Devices<span id="dv-badge" style="display:none;background:#fb923c;color:#0f0d0a;font-size:9px;padding:1px 6px;border-radius:8px;margin-left:4px;font-weight:700;vertical-align:middle">0</span></div>
+  <div class="tab" data-p="team">Team</div>
 </div>
 
 <!-- INBOX PAGE -->
@@ -171,17 +171,17 @@ select:focus{outline:none;border-color:#F58025}
 <div id="apList"><div class="es">Loading...</div></div>
 </div>
 
-<!-- DEVICES PAGE -->
-<div class="page" id="p-devices">
-<div class="hdr"><h1>DEVICES</h1><div class="sub" id="dv-sub">Jarvis OS telemetry &middot; Sprint X v2</div></div>
+<!-- TEAM PAGE -->
+<div class="page" id="p-team">
+<div class="hdr"><h1>TEAM</h1><div class="sub" id="tm-sub">Your people and your AI specialists</div></div>
 <div id="st5" class="st"></div>
-<div id="dvSync"><div class="es">Loading sync state...</div></div>
-<div class="section-label" style="margin-top:16px">Devices</div>
-<div id="dvList"><div class="es">Loading...</div></div>
-<div class="section-label" style="margin-top:16px">Drift events (last 7 days)</div>
-<div id="dvDrift"><div class="es">Loading...</div></div>
-<button class="btn" id="dvForceBtn" style="margin-top:16px" onclick="forceSync()">Force sync from git now</button>
-<div style="font-size:11px;color:#555;text-align:center;margin-top:8px;line-height:1.5">Pulls canonical HEAD from Dadyx-code/dadyx-skills into registry.<br>Tap if a device shows drift or sync looks stale.</div>
+<div id="tmNight"></div>
+<div class="section-label" style="margin-top:16px">Your humans</div>
+<div id="tmHumans"><div class="es">Loading...</div></div>
+<div class="section-label" style="margin-top:16px">Your AI specialists</div>
+<div id="tmAgents"><div class="es">Loading...</div></div>
+<div class="section-label" style="margin-top:16px">What the team learned this week</div>
+<div id="tmLearn"><div class="es">Loading...</div></div>
 </div>
 
 <script>
@@ -198,7 +198,7 @@ document.querySelectorAll('.tab').forEach(function(t){t.addEventListener('click'
   if(t.dataset.p==='tasks'){loadTasks();loadLPProjects()}
   if(t.dataset.p==='content') loadContent();
   if(t.dataset.p==='approvals') loadApprovals();
-  if(t.dataset.p==='devices') loadDevices();
+  if(t.dataset.p==='team') loadTeam();
 })});
 
 /* --- INBOX --- */
@@ -782,128 +782,154 @@ setInterval(function(){if(document.getElementById('p-approvals').classList.conta
 /* preload badge */
 fetch(SB+'/rest/v1/approvals?select=id&status=eq.pending',{headers:H}).then(function(r){return r.json()}).then(function(data){if(data&&data.length){var b=document.getElementById('ap-badge');b.textContent=data.length;b.style.display='inline-block'}}).catch(function(){});
 
-/* --- DEVICES --- */
-function healthColor(h){return h==='green'?'#4ade80':h==='yellow'?'#fb923c':h==='red'?'#f87171':'#888'}
-function healthBg(h){return h==='green'?'#0a2e1a':h==='yellow'?'#2e1a0a':h==='red'?'#2e0a0a':'#14120e'}
-function shortSha(s){return s?String(s).substring(0,7):'—'}
-function shortFp(s){return s?String(s).substring(0,10)+'…':'—'}
+/* --- TEAM --- */
+var HUMAN_NAMES={'natasa-markotic':'Nataša Markotić','natasa-hren':'Nataša Hren','patricia-glavas':'Patricia Glavaš','ana-lener':'Ana Lener'};
+var HUMAN_ROLE={'finance-lead':'finance','procurement':'procurement','admin':'admin + orders','orders':'orders + export'};
+var HUMAN_NOTE={'natasa-markotic':'Luka (her AI accountant) wired up 21 Apr','natasa-hren':'Employee of the decade','patricia-glavas':'','ana-lener':''};
+var AGENT_LABEL={echo:'your LinkedIn voice',blaze:'copywriter',luka:"Nataša Markotić's accountant",prism:'designer',forge:'video maker',orbit:'marketing strategist',radar:'competitor intel',edge:'A/B testing',grid:'UX/UI designer',atlas:'SEO strategist',ledger:'CFO analyst'};
+var AGENT_EMOJI={echo:'✍️',blaze:'🔥',luka:'📒',prism:'🎨',forge:'🎬',orbit:'📈',radar:'🔍',edge:'🧪',grid:'🏗️',atlas:'🗺️',ledger:'💼'};
 
-function loadDevices(){
-  var since=new Date(Date.now()-14*86400*1000).toISOString();
-  var driftSince=new Date(Date.now()-7*86400*1000).toISOString();
+function ago(iso){if(!iso)return'never';var d=(Date.now()-new Date(iso).getTime())/1000;if(d<60)return'just now';if(d<3600)return Math.floor(d/60)+'m ago';if(d<86400)return Math.floor(d/3600)+'h ago';if(d<604800)return Math.floor(d/86400)+'d ago';return Math.floor(d/604800)+'w ago'}
+function trimSum(s,n){if(!s)return'';s=s.replace(/\s+/g,' ').trim();return s.length>n?s.substring(0,n-1)+'…':s}
+
+function loadTeam(){
+  var weekAgo=new Date(Date.now()-7*86400*1000).toISOString();
   Promise.all([
-    fetch(SB+'/rest/v1/registry_sync_state?select=*',{headers:H}).then(function(r){return r.json()}),
-    fetch(SB+'/rest/v1/device_sessions?select=device_slug,hostname,os,last_heartbeat_at,started_at,health,skills_fingerprint,hook_fingerprint,git_sha_at_boot,drift_detected,actions_taken&last_heartbeat_at=gte.'+since+'&order=last_heartbeat_at.desc&limit=100',{headers:H}).then(function(r){return r.json()}),
-    fetch(SB+'/rest/v1/device_sessions?select=device_slug,hostname,last_heartbeat_at,health,drift_detected&last_heartbeat_at=gte.'+driftSince+'&order=last_heartbeat_at.desc&limit=50',{headers:H}).then(function(r){return r.json()})
-  ]).then(function(results){
-    renderSyncState(results[0]);
-    renderDeviceList(results[1]||[]);
-    renderDriftEvents(results[2]||[]);
+    fetch(SB+'/rest/v1/agent_results?select=agent_name,summary,started_at,status&order=started_at.desc&limit=200',{headers:H}).then(function(r){return r.json()}),
+    fetch(SB+'/rest/v1/registry_deploys?select=slug,role,metadata&order=slug',{headers:H}).then(function(r){return r.json()}),
+    fetch(SB+'/rest/v1/registry_active_agents?select=name,kind,scope_deploy,description&kind=in.(agent,employee_scoped)',{headers:H}).then(function(r){return r.json()}),
+    fetch(SB+'/rest/v1/skill_learnings?select=skill_name,rule,type,created_at&active=eq.true&order=created_at.desc&limit=300',{headers:H}).then(function(r){return r.json()})
+  ]).then(function(res){
+    var runs=res[0]||[],deploys=res[1]||[],roster=res[2]||[],learns=res[3]||[];
+    renderNight(runs);
+    renderHumans(deploys,runs);
+    renderAgents(roster,runs,learns,weekAgo);
+    renderLearnings(learns,weekAgo);
   }).catch(function(e){
-    document.getElementById('dvList').innerHTML='<div class="es" style="color:#f87171">Failed: '+e.message+'</div>';
+    document.getElementById('tmAgents').innerHTML='<div class="es" style="color:#f87171">Failed to load: '+e.message+'</div>';
   });
 }
 
-function renderSyncState(rows){
-  var el=document.getElementById('dvSync');
-  if(!rows||!rows.length){el.innerHTML='<div class="es">No sync state recorded yet</div>';return}
-  var s=rows[0];
-  var ok=!s.last_error;
-  var col=ok?'#4ade80':'#f87171';
-  var ageMin=Math.floor((Date.now()-new Date(s.last_synced_at).getTime())/60000);
-  var ageLabel=ageMin<60?ageMin+'m ago':ageMin<1440?Math.floor(ageMin/60)+'h ago':Math.floor(ageMin/1440)+'d ago';
-  var stale=ageMin>180;
-  var html='<div style="background:#14120e;border:1px solid #2a1a0a;border-left:3px solid '+col+';border-radius:10px;padding:14px">';
-  html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">';
-  html+='<div style="font-weight:600;font-size:14px;color:#e0e0e0">Cloud registry</div>';
-  html+='<span style="font-size:10px;padding:2px 8px;border-radius:10px;border:1px solid '+col+';color:'+col+'">'+(ok?'synced':'error')+'</span>';
-  html+='</div>';
-  html+='<div style="font-size:11px;color:#888;line-height:1.6">';
-  html+='<div><span style="color:#555">repo</span> &middot; '+hesc(s.repo||'—')+'</div>';
-  html+='<div><span style="color:#555">sha</span> &middot; <code style="color:#F58025;font-size:11px">'+shortSha(s.last_synced_sha)+'</code></div>';
-  html+='<div><span style="color:#555">skills</span> &middot; '+(s.last_skill_count||0)+' files</div>';
-  html+='<div><span style="color:#555">synced</span> &middot; '+ageLabel+(stale?' <span style="color:#fb923c">(stale)</span>':'')+'</div>';
-  if(s.last_error)html+='<div style="margin-top:6px;color:#f87171">'+hesc(s.last_error)+'</div>';
-  html+='</div></div>';
-  el.innerHTML=html;
+function renderNight(runs){
+  var el=document.getElementById('tmNight');
+  var o=null;for(var i=0;i<runs.length;i++){if(runs[i].agent_name==='overnight-worker'){o=runs[i];break}}
+  if(!o){el.innerHTML='';return}
+  var when=ago(o.started_at);
+  el.innerHTML='<div style="background:#14120e;border:1px solid #2a1a0a;border-left:3px solid #a78bfa;border-radius:10px;padding:14px;margin-bottom:12px">'+
+    '<div style="font-size:10px;color:#a78bfa;font-weight:700;letter-spacing:1px;margin-bottom:6px">🌙 LAST NIGHT &middot; '+when+'</div>'+
+    '<div style="font-size:13px;color:#e0e0e0;line-height:1.5">'+hesc(trimSum(o.summary,260))+'</div>'+
+    '</div>';
 }
 
-function renderDeviceList(rows){
-  var el=document.getElementById('dvList');
-  if(!rows.length){el.innerHTML='<div class="es">No device sessions in last 14 days</div>';return}
-  // Dedupe by device_slug, keep most recent (rows already ordered desc)
-  var seen={};var devices=[];
-  for(var i=0;i<rows.length;i++){var d=rows[i];if(!seen[d.device_slug]){seen[d.device_slug]=1;devices.push(d)}}
+function renderHumans(deploys,runs){
+  var el=document.getElementById('tmHumans');
+  if(!deploys.length){el.innerHTML='<div class="es">No humans deployed yet</div>';return}
   var s='';
-  for(var j=0;j<devices.length;j++){
-    var d=devices[j];
-    var col=healthColor(d.health);
-    var bg=healthBg(d.health);
-    var ageMin=Math.floor((Date.now()-new Date(d.last_heartbeat_at).getTime())/60000);
-    var ageLabel=ageMin<1?'just now':ageMin<60?ageMin+'m ago':ageMin<1440?Math.floor(ageMin/60)+'h ago':Math.floor(ageMin/1440)+'d ago';
-    var driftCount=Array.isArray(d.drift_detected)?d.drift_detected.length:0;
-    var actionCount=Array.isArray(d.actions_taken)?d.actions_taken.length:0;
-    s+='<div style="background:#14120e;border:1px solid #2a1a0a;border-left:3px solid '+col+';border-radius:10px;padding:14px;margin-bottom:8px">';
-    s+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">';
-    s+='<div style="font-weight:600;font-size:15px;color:#e0e0e0">'+hesc(d.device_slug)+'</div>';
-    s+='<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:'+bg+';border:1px solid '+col+';color:'+col+'">'+(d.health||'unknown')+'</span>';
+  for(var i=0;i<deploys.length;i++){
+    var d=deploys[i];
+    var name=HUMAN_NAMES[d.slug]||d.slug;
+    var role=HUMAN_ROLE[d.role]||d.role||'';
+    var note=HUMAN_NOTE[d.slug]||'';
+    var lastRun=null;for(var j=0;j<runs.length;j++){if(runs[j].agent_name===d.slug){lastRun=runs[j];break}}
+    s+='<div style="background:#14120e;border:1px solid #2a1a0a;border-left:3px solid #4ade80;border-radius:10px;padding:12px;margin-bottom:8px">';
+    s+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">';
+    s+='<div style="font-weight:600;font-size:15px;color:#e0e0e0">'+hesc(name)+'</div>';
+    s+='<span style="font-size:11px;color:#888">'+hesc(role)+'</span>';
     s+='</div>';
-    s+='<div style="font-size:11px;color:#888;line-height:1.6">';
-    s+='<div><span style="color:#555">host</span> &middot; '+hesc(d.hostname||'—')+' ('+hesc(d.os||'?')+')</div>';
-    s+='<div><span style="color:#555">last boot</span> &middot; '+ageLabel+'</div>';
-    s+='<div><span style="color:#555">git sha</span> &middot; <code style="color:#F58025;font-size:11px">'+shortSha(d.git_sha_at_boot)+'</code></div>';
-    s+='<div><span style="color:#555">skills fp</span> &middot; <code style="font-size:10px;color:#888">'+shortFp(d.skills_fingerprint)+'</code></div>';
-    if(driftCount)s+='<div style="color:#fb923c">&#9888; '+driftCount+' drift signal'+(driftCount!==1?'s':'')+' on this boot</div>';
-    if(actionCount)s+='<div style="color:#4ade80">&#10003; '+actionCount+' auto-heal action'+(actionCount!==1?'s':'')+' taken</div>';
+    if(note)s+='<div style="font-size:12px;color:#999;line-height:1.5">'+hesc(note)+'</div>';
+    if(lastRun)s+='<div style="font-size:11px;color:#666;margin-top:4px">Last worked: '+ago(lastRun.started_at)+'</div>';
+    else if(!note)s+='<div style="font-size:11px;color:#555;margin-top:4px">Hasn’t started a session yet</div>';
+    s+='</div>';
+  }
+  el.innerHTML=s;
+}
+
+function renderAgents(roster,runs,learns,weekAgo){
+  var el=document.getElementById('tmAgents');
+  if(!roster.length){el.innerHTML='<div class="es">No agents in roster</div>';return}
+  // Build per-agent data
+  var data={};
+  for(var i=0;i<roster.length;i++){
+    var r=roster[i];
+    data[r.name]={name:r.name,kind:r.kind,scope:r.scope_deploy,totalLearn:0,weekLearn:0,lastRun:null};
+  }
+  for(var j=0;j<learns.length;j++){
+    var l=learns[j];if(!data[l.skill_name])continue;
+    data[l.skill_name].totalLearn++;
+    if(l.created_at>=weekAgo)data[l.skill_name].weekLearn++;
+  }
+  for(var k=0;k<runs.length;k++){
+    var ru=runs[k];if(!data[ru.agent_name])continue;
+    if(!data[ru.agent_name].lastRun)data[ru.agent_name].lastRun=ru;
+  }
+  // Sort: recently active first (has lastRun in last 30d), then by total learnings desc
+  var arr=[];for(var key in data)arr.push(data[key]);
+  arr.sort(function(a,b){
+    var aAct=a.lastRun?new Date(a.lastRun.started_at).getTime():0;
+    var bAct=b.lastRun?new Date(b.lastRun.started_at).getTime():0;
+    if(aAct!==bAct)return bAct-aAct;
+    return b.totalLearn-a.totalLearn;
+  });
+  var s='';
+  var dormant=[];
+  for(var m=0;m<arr.length;m++){
+    var a=arr[m];
+    var active=a.lastRun||a.weekLearn>0;
+    if(!active){dormant.push(a);continue}
+    var emoji=AGENT_EMOJI[a.name]||'✨';
+    var label=AGENT_LABEL[a.name]||'specialist';
+    if(a.kind==='employee_scoped')label+=' (only '+(HUMAN_NAMES[a.scope]||a.scope)+' can call)';
+    s+='<div style="background:#14120e;border:1px solid #2a1a0a;border-left:3px solid #F58025;border-radius:10px;padding:12px;margin-bottom:8px">';
+    s+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">';
+    s+='<div style="font-weight:600;font-size:15px;color:#e0e0e0">'+emoji+' '+a.name.charAt(0).toUpperCase()+a.name.slice(1)+'</div>';
+    s+='<span style="font-size:11px;color:#888">'+hesc(label)+'</span>';
+    s+='</div>';
+    if(a.weekLearn>0)s+='<div style="font-size:12px;color:#4ade80;line-height:1.5">💡 Learned '+a.weekLearn+' new rule'+(a.weekLearn!==1?'s':'')+' this week</div>';
+    if(a.lastRun)s+='<div style="font-size:12px;color:#999;line-height:1.5;margin-top:2px">Last job ('+ago(a.lastRun.started_at)+'): '+hesc(trimSum(a.lastRun.summary,140))+'</div>';
+    s+='<div style="font-size:11px;color:#666;margin-top:6px">'+a.totalLearn+' rule'+(a.totalLearn!==1?'s':'')+' memorized total</div>';
+    s+='</div>';
+  }
+  if(dormant.length){
+    s+='<div style="background:#0f0d0a;border:1px dashed #2a1a0a;border-radius:10px;padding:12px;margin-bottom:8px">';
+    s+='<div style="font-size:11px;color:#666;margin-bottom:6px">Quiet this week (tap to ask them something):</div>';
+    s+='<div style="display:flex;flex-wrap:wrap;gap:6px">';
+    for(var n=0;n<dormant.length;n++){
+      var dm=dormant[n];
+      var de=AGENT_EMOJI[dm.name]||'✨';
+      var dl=AGENT_LABEL[dm.name]||'';
+      s+='<span style="font-size:11px;padding:4px 10px;border-radius:10px;background:#14120e;border:1px solid #2a1a0a;color:#888">'+de+' '+dm.name.charAt(0).toUpperCase()+dm.name.slice(1)+(dl?' · '+hesc(dl):'')+'</span>';
+    }
     s+='</div></div>';
   }
   el.innerHTML=s;
 }
 
-function renderDriftEvents(rows){
-  var el=document.getElementById('dvDrift');
-  var badge=document.getElementById('dv-badge');
-  var events=rows.filter(function(r){return Array.isArray(r.drift_detected)&&r.drift_detected.length>0});
-  if(!events.length){el.innerHTML='<div class="es">No drift in last 7 days &middot; everything aligned</div>';badge.style.display='none';return}
-  badge.textContent=events.length;badge.style.display='inline-block';
+function renderLearnings(learns,weekAgo){
+  var el=document.getElementById('tmLearn');
+  var week=learns.filter(function(l){return l.created_at>=weekAgo});
+  if(!week.length){el.innerHTML='<div class="es">Nothing new memorized this week</div>';return}
+  // Show top 5, preferring variety of skills
+  var seen={};var top=[];
+  for(var i=0;i<week.length&&top.length<5;i++){
+    var l=week[i];if(seen[l.skill_name])continue;
+    seen[l.skill_name]=1;top.push(l);
+  }
+  // If we have fewer than 5 distinct skills, fill in with more from biggest learners
+  if(top.length<5){for(var j=0;j<week.length&&top.length<5;j++){if(top.indexOf(week[j])===-1)top.push(week[j])}}
   var s='';
-  var max=Math.min(events.length,15);
-  for(var i=0;i<max;i++){
-    var e=events[i];
-    var ts=new Date(e.last_heartbeat_at);
-    var tsStr=ts.toLocaleDateString('hr-HR')+' '+ts.toLocaleTimeString('hr-HR',{hour:'2-digit',minute:'2-digit'});
-    var types=e.drift_detected.map(function(d){return d.type||'unknown'}).join(', ');
-    s+='<div style="background:#14120e;border:1px solid #2a1a0a;border-left:2px solid #fb923c;border-radius:8px;padding:10px;margin-bottom:6px;font-size:12px">';
-    s+='<div style="display:flex;justify-content:space-between;color:#e0e0e0"><span>'+hesc(e.device_slug)+'</span><span style="color:#555;font-size:11px">'+tsStr+'</span></div>';
-    s+='<div style="color:#fb923c;font-size:11px;margin-top:3px">'+hesc(types)+'</div>';
-    var details=e.drift_detected.map(function(d){return d.detail||''}).filter(Boolean);
-    if(details.length)s+='<div style="color:#888;font-size:11px;margin-top:3px;line-height:1.5">'+hesc(details.join(' &middot; '))+'</div>';
+  for(var k=0;k<top.length;k++){
+    var L=top[k];
+    var emoji=AGENT_EMOJI[L.skill_name]||'✨';
+    var who=L.skill_name.charAt(0).toUpperCase()+L.skill_name.slice(1);
+    s+='<div style="background:#14120e;border:1px solid #2a1a0a;border-radius:8px;padding:10px;margin-bottom:6px">';
+    s+='<div style="font-size:11px;color:#4ade80;margin-bottom:3px">'+emoji+' '+hesc(who)+' learned · '+ago(L.created_at)+'</div>';
+    s+='<div style="font-size:12px;color:#ccc;line-height:1.5;font-style:italic">"'+hesc(trimSum(L.rule,220))+'"</div>';
     s+='</div>';
   }
-  if(events.length>max)s+='<div class="es" style="font-size:11px">+ '+(events.length-max)+' older event'+(events.length-max!==1?'s':'')+'</div>';
+  if(week.length>top.length)s+='<div class="es" style="font-size:11px">+ '+(week.length-top.length)+' more this week</div>';
   el.innerHTML=s;
 }
 
-function forceSync(){
-  var btn=document.getElementById('dvForceBtn');
-  btn.disabled=true;btn.textContent='Syncing...';
-  ss('st5','Pulling git HEAD into registry...','wait');
-  fetch(SB+'/rest/v1/rpc/jarvis_sync_skills_from_git',{method:'POST',headers:H,body:JSON.stringify({force_sync:true,trigger_label:'pwa-manual'})})
-  .then(function(r){if(!r.ok)return r.text().then(function(t){throw new Error('HTTP '+r.status+' '+t)});return r.json()})
-  .then(function(){ss('st5','Sync complete','ok');if(navigator.vibrate)navigator.vibrate(50);loadDevices()})
-  .catch(function(e){ss('st5','Sync failed: '+e.message,'err')})
-  .finally(function(){btn.disabled=false;btn.textContent='Force sync from git now'});
-}
-
-/* preload drift badge */
-(function(){
-  var driftSince=new Date(Date.now()-7*86400*1000).toISOString();
-  fetch(SB+'/rest/v1/device_sessions?select=drift_detected&last_heartbeat_at=gte.'+driftSince+'&limit=50',{headers:H})
-  .then(function(r){return r.json()}).then(function(data){
-    var n=(data||[]).filter(function(r){return Array.isArray(r.drift_detected)&&r.drift_detected.length>0}).length;
-    if(n){var b=document.getElementById('dv-badge');b.textContent=n;b.style.display='inline-block'}
-  }).catch(function(){});
-})();
 
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('sw.js').then(function(reg){

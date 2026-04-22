@@ -1,5 +1,5 @@
-// Jarvis SW v5 — Sprint Y: Devices telemetry tab
-const CACHE = 'jarvis-v5';
+// Jarvis SW v6 — Team tab (your people + AI specialists in plain English)
+const CACHE = 'jarvis-v6';
 
 self.addEventListener('install', function(e) {
   self.skipWaiting();
