@@ -224,28 +224,42 @@ rih();loadQueue();loadBriefing();loadOvernight();
 
 /* --- MORNING BRIEFING --- */
 function loadBriefing(){
-  fetch(SB+'/rest/v1/morning_briefing?select=*&order=briefing_date.desc&limit=1',{headers:H})
-  .then(function(r){return r.json()})
-  .then(function(data){
-    var el=document.getElementById('briefingCard');
-    if(!el||!data||!data.length){return}
-    var b=data[0];
+  var since=new Date(Date.now()-30*60*60*1000).toISOString();
+  Promise.all([
+    fetch(SB+'/rest/v1/morning_briefing?select=*&order=briefing_date.desc&limit=1',{headers:H}).then(function(r){return r.json()}),
+    fetch(SB+'/rest/v1/v_employee_activity?select=employee_name,knowledge_type,title,created_at&created_at=gte.'+since+'&order=created_at.desc&limit=80',{headers:H}).then(function(r){return r.json()}).catch(function(){return []})
+  ]).then(function(results){
+    var el=document.getElementById('briefingCard');if(!el)return;
+    var data=results[0]||[],team=results[1]||[];
+    if(!data.length&&!team.length)return;
+    var b=data[0]||{};
     function esc(s){return (s||'').toString().replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
-    var dateStr=new Date(b.briefing_date).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'short'});
+    var dateStr=b.briefing_date?new Date(b.briefing_date).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'short'}):new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'short'});
     var wins=(b.wins||[]).map(function(w){return '<li>'+esc(w)+'</li>'}).join('');
     var flags=(b.red_flags||[]).map(function(f){return '<li>'+esc(f)+'</li>'}).join('');
-    var tasks=(b.top_tasks||[]).slice(0,5).map(function(t){if(typeof t==='string')return '<li>'+esc(t)+'</li>';var label=t.action||t.title||t.task||'(untitled)';var pri=t.priority?' <span style="color:#F58025;font-weight:700">['+esc(t.priority)+']</span>':'';var dl=t.deadline?' <span style="color:#666">· '+esc(t.deadline)+'</span>':'';return '<li>'+esc(label)+pri+dl+'</li>'}).join('');
+    var tasks=(b.top_tasks||[]).slice(0,5).map(function(t){if(typeof t==='string')return '<li>'+esc(t)+'</li>';var label=t.action||t.title||t.task||'(untitled)';var pri=t.priority?' <span style="color:#F58025;font-weight:700">['+esc(t.priority)+']</span>':'';var dl=t.deadline?' <span style="color:#666">&middot; '+esc(t.deadline)+'</span>':'';return '<li>'+esc(label)+pri+dl+'</li>'}).join('');
     var approvals=Array.isArray(b.needs_approval)?b.needs_approval.length:0;
+    var teamHtml='';
+    if(team.length){
+      var byEmp={};team.forEach(function(r){if(!byEmp[r.employee_name])byEmp[r.employee_name]=[];byEmp[r.employee_name].push(r)});
+      var rows=Object.keys(byEmp).sort().map(function(n){
+        var entries=byEmp[n];
+        var first=entries.slice(0,2).map(function(e){return esc(e.title||'(untitled)')}).join(' &middot; ');
+        var more=entries.length>2?' <span style="color:#555">+'+(entries.length-2)+' more</span>':'';
+        return '<li><b style="color:#e0e0e0">'+esc(n.split(' ')[0])+'</b> ('+entries.length+'): <span style="color:#888">'+first+'</span>'+more+'</li>';
+      }).join('');
+      teamHtml='<div style="font-size:10px;color:#a78bfa;font-weight:700;margin-bottom:4px">TIM (zadnjih 30h) &middot; <span style="cursor:pointer;text-decoration:underline" onclick="document.querySelector(\'.tab[data-p=team]\').click()">vidi sve</span></div><ul style="font-size:12px;color:#999;margin:0 0 10px 16px;padding:0">'+rows+'</ul>';
+    }
     el.innerHTML='<div style="background:#14120e;border:1px solid #2a1a0a;border-left:3px solid #F58025;border-radius:10px;padding:14px;margin-bottom:12px">'+
       '<div style="font-size:10px;color:#F58025;font-weight:700;letter-spacing:1px;margin-bottom:6px">MORNING BRIEFING &middot; '+dateStr+'</div>'+
-      '<div style="font-size:13px;color:#e0e0e0;line-height:1.5;margin-bottom:10px">'+esc(b.narrative||'')+'</div>'+
+      (b.narrative?'<div style="font-size:13px;color:#e0e0e0;line-height:1.5;margin-bottom:10px">'+esc(b.narrative)+'</div>':'')+
       (wins?'<div style="font-size:10px;color:#4ade80;font-weight:700;margin-bottom:4px">YESTERDAY</div><ul style="font-size:12px;color:#999;margin:0 0 10px 16px;padding:0">'+wins+'</ul>':'')+
+      teamHtml+
       (flags?'<div style="font-size:10px;color:#f87171;font-weight:700;margin-bottom:4px">RED FLAGS</div><ul style="font-size:12px;color:#999;margin:0 0 10px 16px;padding:0">'+flags+'</ul>':'')+
       (tasks?'<div style="font-size:10px;color:#F58025;font-weight:700;margin-bottom:4px">TODAY PRIORITIES</div><ul style="font-size:12px;color:#999;margin:0 0 10px 16px;padding:0">'+tasks+'</ul>':'')+
-      '<div style="font-size:10px;color:#555;margin-top:8px">Inbox: '+(b.inbox_unprocessed||0)+' &middot; Approvals: '+approvals+' &middot; Proposed: '+(b.skill_improvements_proposed||0)+'</div>'+
+      '<div style="font-size:10px;color:#555;margin-top:8px">Inbox: '+(b.inbox_unprocessed||0)+' &middot; Approvals: '+approvals+' &middot; Tim: '+team.length+'</div>'+
     '</div>';
-  })
-  .catch(function(){});
+  }).catch(function(){});
 }
 
 /* --- OVERNIGHT MENU (approve/reject before sleep) --- */
@@ -794,15 +808,17 @@ function trimSum(s,n){if(!s)return'';s=s.replace(/\s+/g,' ').trim();return s.len
 
 function loadTeam(){
   var weekAgo=new Date(Date.now()-7*86400*1000).toISOString();
+  var twoWeeksAgo=new Date(Date.now()-14*86400*1000).toISOString();
   Promise.all([
     fetch(SB+'/rest/v1/agent_results?select=agent_name,summary,started_at,status&order=started_at.desc&limit=200',{headers:H}).then(function(r){return r.json()}),
     fetch(SB+'/rest/v1/registry_deploys?select=slug,role,metadata&order=slug',{headers:H}).then(function(r){return r.json()}),
     fetch(SB+'/rest/v1/registry_active_agents?select=name,kind,scope_deploy,description&kind=in.(agent,employee_scoped)',{headers:H}).then(function(r){return r.json()}),
-    fetch(SB+'/rest/v1/skill_learnings?select=skill_name,rule,type,created_at&active=eq.true&order=created_at.desc&limit=300',{headers:H}).then(function(r){return r.json()})
+    fetch(SB+'/rest/v1/skill_learnings?select=skill_name,rule,type,created_at&active=eq.true&order=created_at.desc&limit=300',{headers:H}).then(function(r){return r.json()}),
+    fetch(SB+'/rest/v1/v_employee_activity?select=employee_name,knowledge_type,title,content_preview,created_at&created_at=gte.'+twoWeeksAgo+'&order=created_at.desc&limit=300',{headers:H}).then(function(r){return r.json()}).catch(function(){return []})
   ]).then(function(res){
-    var runs=res[0]||[],deploys=res[1]||[],roster=res[2]||[],learns=res[3]||[];
+    var runs=res[0]||[],deploys=res[1]||[],roster=res[2]||[],learns=res[3]||[],humanLogs=res[4]||[];
     renderNight(runs);
-    renderHumans(deploys,runs);
+    renderHumans(deploys,runs,humanLogs);
     renderAgents(roster,runs,learns,weekAgo);
     renderLearnings(learns,weekAgo);
   }).catch(function(e){
@@ -821,9 +837,14 @@ function renderNight(runs){
     '</div>';
 }
 
-function renderHumans(deploys,runs){
+function renderHumans(deploys,runs,humanLogs){
   var el=document.getElementById('tmHumans');
   if(!deploys.length){el.innerHTML='<div class="es">No humans deployed yet</div>';return}
+  humanLogs=humanLogs||[];
+  // Group logs by employee_name for fast lookup
+  var logsByName={};
+  for(var x=0;x<humanLogs.length;x++){var ln=humanLogs[x].employee_name;if(!logsByName[ln])logsByName[ln]=[];logsByName[ln].push(humanLogs[x])}
+  var typeColor={reference:'#888',learning:'#60a5fa',pattern:'#a78bfa',decision:'#fb923c',project_note:'#F58025',preference:'#999',feedback:'#4ade80',conversation_summary:'#666'};
   var s='';
   for(var i=0;i<deploys.length;i++){
     var d=deploys[i];
@@ -831,14 +852,42 @@ function renderHumans(deploys,runs){
     var role=HUMAN_ROLE[d.role]||d.role||'';
     var note=HUMAN_NOTE[d.slug]||'';
     var lastRun=null;for(var j=0;j<runs.length;j++){if(runs[j].agent_name===d.slug){lastRun=runs[j];break}}
+    var herLogs=logsByName[name]||[];
     s+='<div style="background:#14120e;border:1px solid #2a1a0a;border-left:3px solid #4ade80;border-radius:10px;padding:12px;margin-bottom:8px">';
     s+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">';
-    s+='<div style="font-weight:600;font-size:15px;color:#e0e0e0">'+hesc(name)+'</div>';
+    s+='<div style="font-weight:600;font-size:15px;color:#e0e0e0">'+hesc(name)+(herLogs.length?' <span style="font-size:11px;color:#4ade80;font-weight:600">&middot; '+herLogs.length+' logged</span>':'')+'</div>';
     s+='<span style="font-size:11px;color:#888">'+hesc(role)+'</span>';
     s+='</div>';
     if(note)s+='<div style="font-size:12px;color:#999;line-height:1.5">'+hesc(note)+'</div>';
-    if(lastRun)s+='<div style="font-size:11px;color:#666;margin-top:4px">Last worked: '+ago(lastRun.started_at)+'</div>';
-    else if(!note)s+='<div style="font-size:11px;color:#555;margin-top:4px">Hasn’t started a session yet</div>';
+    if(lastRun)s+='<div style="font-size:11px;color:#666;margin-top:4px">Last session: '+ago(lastRun.started_at)+'</div>';
+    if(herLogs.length){
+      s+='<div style="margin-top:10px;padding-top:8px;border-top:1px solid #1a1710">';
+      var preview=herLogs.slice(0,3);
+      for(var k=0;k<preview.length;k++){
+        var L=preview[k];var col=typeColor[L.knowledge_type]||'#666';
+        s+='<div style="margin-bottom:8px">';
+        s+='<div style="font-size:12px;color:#e0e0e0;font-weight:500;line-height:1.4">'+hesc(L.title||'(untitled)')+'</div>';
+        if(L.content_preview)s+='<div style="font-size:11px;color:#888;line-height:1.4;margin-top:2px">'+hesc(trimSum(L.content_preview,180))+'</div>';
+        s+='<div style="font-size:10px;color:#555;margin-top:2px"><span style="color:'+col+'">'+L.knowledge_type+'</span> &middot; '+ago(L.created_at)+'</div>';
+        s+='</div>';
+      }
+      if(herLogs.length>3){
+        var hidden=herLogs.length-3;
+        s+='<details style="margin-top:6px"><summary style="font-size:11px;color:#F58025;cursor:pointer;list-style:none">+ '+hidden+' more (tap to expand)</summary><div style="margin-top:8px">';
+        for(var m=3;m<herLogs.length;m++){
+          var M=herLogs[m];var mc=typeColor[M.knowledge_type]||'#666';
+          s+='<div style="margin-bottom:8px">';
+          s+='<div style="font-size:12px;color:#e0e0e0;font-weight:500;line-height:1.4">'+hesc(M.title||'(untitled)')+'</div>';
+          if(M.content_preview)s+='<div style="font-size:11px;color:#888;line-height:1.4;margin-top:2px">'+hesc(trimSum(M.content_preview,180))+'</div>';
+          s+='<div style="font-size:10px;color:#555;margin-top:2px"><span style="color:'+mc+'">'+M.knowledge_type+'</span> &middot; '+ago(M.created_at)+'</div>';
+          s+='</div>';
+        }
+        s+='</div></details>';
+      }
+      s+='</div>';
+    } else if(!note&&!lastRun){
+      s+='<div style="font-size:11px;color:#555;margin-top:4px">Hasn’t logged anything yet</div>';
+    }
     s+='</div>';
   }
   el.innerHTML=s;
