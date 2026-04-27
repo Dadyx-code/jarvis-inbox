@@ -295,9 +295,15 @@ document.addEventListener('DOMContentLoaded',function(){
     var code=document.getElementById('liCode').value;
     var btn=document.getElementById('liBtn');var err=document.getElementById('liErr');
     err.classList.remove('show');btn.disabled=true;btn.textContent='Provjeravam...';
-    JarvisAuth.signInOtp(email,code).then(function(){showApp()}).catch(function(e){
+    JarvisAuth.signInOtp(email,code).then(function(s){
+      btn.textContent='Bok '+(s.name||s.email).split(' ')[0]+'! Učitavam...';
+      btn.style.background='#4ade80';
+      /* Hard reload on next tick — silent-refresh path then renders app cleanly.
+         Avoids the in-place CSS swap which had a render race on mobile Safari. */
+      setTimeout(function(){location.reload()},400);
+    }).catch(function(e){
       err.textContent=e.message+'. Provjeri email i kod, ili traži novi od Daria.';err.classList.add('show');
-      btn.disabled=false;btn.textContent='Prijava';
+      btn.disabled=false;btn.textContent='Prijava';btn.style.background='';
     });
   })}
   var so=document.getElementById('signOutBtn');
