@@ -86,9 +86,42 @@ select:focus{outline:none;border-color:#F58025}
 .task-add.open .add-trigger{display:none}
 .task-add.open .add-form{display:block}
 .section-label{font-size:10px;color:#555;text-transform:uppercase;letter-spacing:1px;margin:16px 0 8px;padding-left:4px}
+/* auth gate (Sprint 5.2) */
+body.locked .tabs,body.locked .page{display:none !important}
+body:not(.locked) #loginGate{display:none !important}
+#loginGate{padding:20px;max-width:480px;margin:48px auto}
+.lg-box{background:#14120e;border:1px solid #2a1a0a;border-radius:14px;padding:32px}
+.lg-box h1{color:#F58025;font-size:22px;letter-spacing:.5px;margin-bottom:8px}
+.lg-sub{color:#888;font-size:13px;margin-bottom:20px}
+.lg-err{background:#2e0a0a;border:1px solid #7f1d1d;color:#f87171;padding:12px;border-radius:10px;margin-bottom:14px;font-size:13px;display:none}
+.lg-err.show{display:block}
+.lg-row{margin-bottom:14px}
+.lg-row label{display:block;color:#aaa;font-size:11px;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px}
+.lg-row input{width:100%;background:#0f0d0a;border:1px solid #2a1a0a;border-radius:8px;padding:12px;color:#e0e0e0;font-size:15px;font-family:inherit;box-sizing:border-box}
+.lg-row input.code{font-family:'SF Mono',Consolas,Monaco,monospace;letter-spacing:4px;font-size:20px;text-align:center}
+.lg-row input:focus{outline:none;border-color:#F58025}
+.lg-btn{width:100%;padding:14px;background:#F58025;border:none;border-radius:8px;color:#fff;font-size:15px;font-weight:600;cursor:pointer}
+.lg-btn:disabled{background:#444;cursor:not-allowed}
+.lg-foot{margin-top:16px;color:#555;font-size:11px;text-align:center;line-height:1.5}
+.lg-user{display:flex;align-items:center;gap:8px;background:#0a2e1a;border:1px solid #166534;color:#4ade80;padding:8px 12px;border-radius:8px;margin-bottom:14px;font-size:12px}
+.lg-out{margin-left:auto;background:none;border:1px solid #166534;color:#4ade80;font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer}
 </style>
 </head>
-<body>
+<body class="locked">
+
+<div id="loginGate">
+  <div class="lg-box">
+    <h1>JARVIS</h1>
+    <div class="lg-sub">Prijavi se: email + 8-znamenkasti kod od Daria.</div>
+    <div id="liErr" class="lg-err"></div>
+    <form id="loginForm">
+      <div class="lg-row"><label>Email</label><input type="email" id="liEmail" autocomplete="email" required></div>
+      <div class="lg-row"><label>Kod</label><input type="text" id="liCode" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="one-time-code" class="code" required></div>
+      <button type="submit" class="lg-btn" id="liBtn">Prijava</button>
+    </form>
+    <div class="lg-foot">Nemaš kod? Zatraži ga od Daria.</div>
+  </div>
+</div>
 
 <div class="tabs">
   <div class="tab on" data-p="inbox">Inbox</div>
@@ -186,8 +219,76 @@ select:focus{outline:none;border-color:#F58025}
 
 <script>
 var SB='https://swmtuepntjlkfzpvplsc.supabase.co';
-var SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN3bXR1ZXBudGpsa2Z6cHZwbHNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDk1MDMsImV4cCI6MjA5MDI4NTUwM30.0z2ow5b1k6dzv0pUiqyB9pfj60VPWB2tfox6gIp-pXo';
-var H={'Content-Type':'application/json','apikey':SK,'Authorization':'Bearer '+SK};
+var ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN3bXR1ZXBudGpsa2Z6cHZwbHNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDk1MDMsImV4cCI6MjA5MDI4NTUwM30.0z2ow5b1k6dzv0pUiqyB9pfj60VPWB2tfox6gIp-pXo';
+var H=null; /* populated after JarvisAuth.bootstrap() succeeds */
+
+/* ===== JARVIS AUTH (Sprint 5.2) — every Supabase call goes through here ===== */
+var JarvisAuth=(function(){
+  var KEY='jarvis_auth_v1';
+  var state=null;
+  function load(){try{state=JSON.parse(localStorage.getItem(KEY))}catch(e){state=null}return state}
+  function save(){if(state)localStorage.setItem(KEY,JSON.stringify(state));else localStorage.removeItem(KEY)}
+  function isAuth(){return !!(state&&state.refresh_token)}
+  function needsRefresh(){if(!state||!state.access_token||!state.expires_at)return true;return (Date.now()/1000)>(state.expires_at-60)}
+  function setH(){H={'Content-Type':'application/json','apikey':ANON,'Authorization':'Bearer '+state.access_token}}
+  function refresh(){
+    if(!state||!state.refresh_token)return Promise.reject(new Error('not authenticated'));
+    return fetch(SB+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{'apikey':ANON,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:state.refresh_token})})
+      .then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.error_description||d.msg||'refresh failed');return d})})
+      .then(function(d){
+        state.access_token=d.access_token;state.refresh_token=d.refresh_token;state.expires_at=d.expires_at;
+        if(d.user){state.user_id=d.user.id;state.email=d.user.email;state.name=(d.user.user_metadata&&d.user.user_metadata.name)||d.user.email}
+        save();setH();return state.access_token;
+      });
+  }
+  function ensureFresh(){if(!isAuth())return Promise.reject(new Error('not authenticated'));if(needsRefresh())return refresh();setH();return Promise.resolve(state.access_token)}
+  function signInOtp(email,code){
+    return fetch(SB+'/auth/v1/verify',{method:'POST',headers:{'apikey':ANON,'Content-Type':'application/json'},body:JSON.stringify({type:'email',email:email.trim().toLowerCase(),token:code.trim()})})
+      .then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.error_description||d.msg||('HTTP '+r.status));return d})})
+      .then(function(d){
+        state={access_token:d.access_token,refresh_token:d.refresh_token,expires_at:d.expires_at,user_id:d.user.id,email:d.user.email,name:(d.user.user_metadata&&d.user.user_metadata.name)||d.user.email};
+        save();setH();return state;
+      });
+  }
+  function signOut(){state=null;H=null;save();location.reload()}
+  return {load:load,isAuth:isAuth,ensureFresh:ensureFresh,refresh:refresh,signInOtp:signInOtp,signOut:signOut,getState:function(){return state}};
+})();
+
+/* auth-ready promise — every page-load fetch waits for this */
+var _authReady=new Promise(function(res){window._authResolve=res});
+function whenAuth(fn){_authReady.then(fn)}
+
+/* boot: try silent login, else show login screen */
+function showApp(){document.body.classList.remove('locked');window._authResolve()}
+function showLogin(){document.body.classList.add('locked')}
+
+JarvisAuth.load();
+JarvisAuth.ensureFresh().then(showApp).catch(showLogin);
+
+/* auto-refresh every 50 min + 401 retry safety net */
+setInterval(function(){if(JarvisAuth.isAuth())JarvisAuth.refresh().catch(showLogin)},50*60*1000);
+(function(){var of=window.fetch.bind(window);window.fetch=function(u,o){return of(u,o).then(function(r){
+  if(r.status===401&&typeof u==='string'&&u.indexOf(SB)===0&&u.indexOf('/auth/v1/')===-1){
+    return JarvisAuth.refresh().then(function(){if(o&&o.headers&&o.headers.Authorization)o.headers.Authorization=H.Authorization;return of(u,o)}).catch(function(){showLogin();return r});
+  }
+  return r;
+})}})();
+
+/* login form handler */
+document.addEventListener('DOMContentLoaded',function(){
+  var form=document.getElementById('loginForm');if(!form)return;
+  form.addEventListener('submit',function(ev){
+    ev.preventDefault();
+    var email=document.getElementById('liEmail').value;
+    var code=document.getElementById('liCode').value;
+    var btn=document.getElementById('liBtn');var err=document.getElementById('liErr');
+    err.classList.remove('show');btn.disabled=true;btn.textContent='Provjeravam...';
+    JarvisAuth.signInOtp(email,code).then(function(){showApp()}).catch(function(e){
+      err.textContent=e.message+'. Provjeri email i kod, ili traži novi od Daria.';err.classList.add('show');
+      btn.disabled=false;btn.textContent='Prijava';
+    });
+  });
+});
 
 /* --- TABS --- */
 document.querySelectorAll('.tab').forEach(function(t){t.addEventListener('click',function(){
@@ -220,7 +321,7 @@ document.getElementById('sb').addEventListener('click',function(){
   var project=document.getElementById('pr').value||null;
   fetch(SB+'/rest/v1/inbox',{method:'POST',headers:Object.assign({},H,{'Prefer':'return=minimal'}),body:JSON.stringify({content:content,category:cat,priority:pri,company_hint:company,project_hint:project})}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);ss('st','Sent! Jarvis will process this next session.','ok');svh(content,cat,pri,company);document.getElementById('ct').value='';if(navigator.vibrate)navigator.vibrate(50)}).catch(function(e){ss('st','Failed: '+e.message,'err')}).finally(function(){btn.disabled=false;btn.textContent='Send to Jarvis'})
 });
-rih();loadQueue();loadBriefing();loadOvernight();
+rih();whenAuth(function(){loadQueue();loadBriefing();loadOvernight()});
 
 /* --- MORNING BRIEFING --- */
 function loadBriefing(){
@@ -794,7 +895,7 @@ function respondApproval(id,value){
 setInterval(function(){if(document.getElementById('p-approvals').classList.contains('on'))loadApprovals()},30000);
 
 /* preload badge */
-fetch(SB+'/rest/v1/approvals?select=id&status=eq.pending',{headers:H}).then(function(r){return r.json()}).then(function(data){if(data&&data.length){var b=document.getElementById('ap-badge');b.textContent=data.length;b.style.display='inline-block'}}).catch(function(){});
+whenAuth(function(){fetch(SB+'/rest/v1/approvals?select=id&status=eq.pending',{headers:H}).then(function(r){return r.json()}).then(function(data){if(data&&data.length){var b=document.getElementById('ap-badge');b.textContent=data.length;b.style.display='inline-block'}}).catch(function(){})});
 
 /* --- TEAM --- */
 var HUMAN_NAMES={'natasa-markotic':'Nataša Markotić','natasa-hren':'Nataša Hren','patricia-glavas':'Patricia Glavaš','ana-lener':'Ana Lener'};
