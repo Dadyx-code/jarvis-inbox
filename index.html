@@ -215,6 +215,11 @@ body:not(.locked) #loginGate{display:none !important}
 <div id="tmAgents"><div class="es">Loading...</div></div>
 <div class="section-label" style="margin-top:16px">What the team learned this week</div>
 <div id="tmLearn"><div class="es">Loading...</div></div>
+<div style="margin-top:32px;padding-top:20px;border-top:1px solid #2a1a0a">
+  <div class="section-label">Account</div>
+  <div id="acctInfo" style="color:#888;font-size:12px;margin-bottom:10px">—</div>
+  <button id="signOutBtn" style="background:none;border:1px solid #7f1d1d;color:#f87171;font-size:12px;padding:8px 14px;border-radius:8px;cursor:pointer">Sign out (clears local session)</button>
+</div>
 </div>
 
 <script>
@@ -259,7 +264,14 @@ var _authReady=new Promise(function(res){window._authResolve=res});
 function whenAuth(fn){_authReady.then(fn)}
 
 /* boot: try silent login, else show login screen */
-function showApp(){document.body.classList.remove('locked');window._authResolve()}
+function showApp(){
+  document.body.classList.remove('locked');
+  /* populate account info if Team tab is wired */
+  var s=JarvisAuth.getState();
+  var ai=document.getElementById('acctInfo');
+  if(ai&&s){ai.innerHTML='Signed in as <b style="color:#e0e0e0">'+(s.name||s.email)+'</b><br><span style="color:#555;font-size:11px">'+s.email+' &middot; '+s.user_id.substring(0,8)+'…</span>'}
+  window._authResolve();
+}
 function showLogin(){document.body.classList.add('locked')}
 
 JarvisAuth.load();
@@ -274,10 +286,10 @@ setInterval(function(){if(JarvisAuth.isAuth())JarvisAuth.refresh().catch(showLog
   return r;
 })}})();
 
-/* login form handler */
+/* login form + sign-out button handlers */
 document.addEventListener('DOMContentLoaded',function(){
-  var form=document.getElementById('loginForm');if(!form)return;
-  form.addEventListener('submit',function(ev){
+  var form=document.getElementById('loginForm');
+  if(form){form.addEventListener('submit',function(ev){
     ev.preventDefault();
     var email=document.getElementById('liEmail').value;
     var code=document.getElementById('liCode').value;
@@ -287,7 +299,11 @@ document.addEventListener('DOMContentLoaded',function(){
       err.textContent=e.message+'. Provjeri email i kod, ili traži novi od Daria.';err.classList.add('show');
       btn.disabled=false;btn.textContent='Prijava';
     });
-  });
+  })}
+  var so=document.getElementById('signOutBtn');
+  if(so){so.addEventListener('click',function(){
+    if(confirm('Sign out of this device? You will need a new OTP code from Dario to sign back in.'))JarvisAuth.signOut();
+  })}
 });
 
 /* --- TABS --- */
