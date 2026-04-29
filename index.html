@@ -129,6 +129,7 @@ body:not(.locked) #loginGate{display:none !important}
   <div class="tab" data-p="content">Content</div>
   <div class="tab" data-p="approvals">Approvals<span id="ap-badge" style="display:none;background:#f87171;color:#0f0d0a;font-size:9px;padding:1px 6px;border-radius:8px;margin-left:4px;font-weight:700;vertical-align:middle">0</span></div>
   <div class="tab" data-p="team">Team</div>
+  <div class="tab" data-p="admin" id="adminTab" style="display:none">Admin</div>
 </div>
 
 <!-- INBOX PAGE -->
@@ -222,6 +223,14 @@ body:not(.locked) #loginGate{display:none !important}
 </div>
 </div>
 
+<!-- ADMIN PAGE (owner-only, Sprint 5b) -->
+<div class="page" id="p-admin">
+<div class="hdr"><h1>ADMIN</h1><div class="sub">User management. Owner-only.</div></div>
+<div id="st6" class="st"></div>
+<div class="section-label" style="margin-top:8px">Users</div>
+<div id="adminUsers"><div class="es">Loading...</div></div>
+</div>
+
 <script>
 var SB='https://swmtuepntjlkfzpvplsc.supabase.co';
 var ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN3bXR1ZXBudGpsa2Z6cHZwbHNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDk1MDMsImV4cCI6MjA5MDI4NTUwM30.0z2ow5b1k6dzv0pUiqyB9pfj60VPWB2tfox6gIp-pXo';
@@ -270,6 +279,9 @@ function showApp(){
   var s=JarvisAuth.getState();
   var ai=document.getElementById('acctInfo');
   if(ai&&s){ai.innerHTML='Signed in as <b style="color:#e0e0e0">'+(s.name||s.email)+'</b><br><span style="color:#555;font-size:11px">'+s.email+' &middot; '+s.user_id.substring(0,8)+'…</span>'}
+  /* Sprint 5b.1: owner gate for Admin tab. Email check today; swap to is_owner JWT claim later. */
+  var adminTab=document.getElementById('adminTab');
+  if(adminTab&&s&&s.email==='dario.drmac@gmail.com')adminTab.style.display='';
   window._authResolve();
 }
 function showLogin(){document.body.classList.add('locked')}
@@ -322,6 +334,7 @@ document.querySelectorAll('.tab').forEach(function(t){t.addEventListener('click'
   if(t.dataset.p==='content') loadContent();
   if(t.dataset.p==='approvals') loadApprovals();
   if(t.dataset.p==='team') loadTeam();
+  if(t.dataset.p==='admin') loadAdmin();
 })});
 
 /* --- INBOX --- */
@@ -1100,6 +1113,40 @@ function renderLearnings(learns,weekAgo){
   }
   if(week.length>top.length)s+='<div class="es" style="font-size:11px">+ '+(week.length-top.length)+' more this week</div>';
   el.innerHTML=s;
+}
+
+/* --- ADMIN (Sprint 5b.1: owner-only user list) --- */
+function loadAdmin(){
+  var el=document.getElementById('adminUsers');
+  el.innerHTML='<div class="es">Loading...</div>';
+  fetch(SB+'/rest/v1/rpc/admin_list_users',{method:'POST',headers:H,body:'{}'})
+    .then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.message||('HTTP '+r.status));return d})})
+    .then(function(rows){
+      if(!rows||!rows.length){el.innerHTML='<div class="es">No users</div>';return}
+      var s='';
+      for(var i=0;i<rows.length;i++){
+        var u=rows[i];
+        var disabled=u.banned_until&&new Date(u.banned_until).getTime()>Date.now();
+        var statusBadge=disabled
+          ? '<span style="font-size:10px;color:#f87171;background:#2a0d0d;padding:2px 8px;border-radius:8px;font-weight:600">DISABLED</span>'
+          : '<span style="font-size:10px;color:#4ade80;background:#0d2a14;padding:2px 8px;border-radius:8px;font-weight:600">ACTIVE</span>';
+        var ownerBadge=u.is_owner?' <span style="font-size:10px;color:#F58025;background:#2a1a0a;padding:2px 8px;border-radius:8px;font-weight:600">OWNER</span>':'';
+        var companies=(u.companies||[]).map(function(c){return hesc(c.name)}).join(', ')||'<span style="color:#666">none</span>';
+        s+='<div style="background:#14120e;border:1px solid #2a1a0a;border-left:3px solid '+(disabled?'#7f1d1d':'#4ade80')+';border-radius:10px;padding:12px;margin-bottom:8px">';
+        s+='<div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:6px">';
+        s+='<div style="font-weight:600;font-size:15px;color:#e0e0e0">'+hesc(u.name||'(no name)')+ownerBadge+'</div>';
+        s+=statusBadge;
+        s+='</div>';
+        s+='<div style="font-size:12px;color:#999;line-height:1.6">'+hesc(u.login_email||u.email||'')+'</div>';
+        s+='<div style="font-size:11px;color:#888;line-height:1.6;margin-top:4px"><span style="color:#666">Companies:</span> '+companies+'</div>';
+        s+='<div style="font-size:11px;color:#666;margin-top:4px">Last login: '+(u.last_sign_in_at?ago(u.last_sign_in_at):'never')+(u.role?' &middot; role: '+hesc(u.role):'')+'</div>';
+        s+='</div>';
+      }
+      el.innerHTML=s;
+    })
+    .catch(function(e){
+      el.innerHTML='<div class="es" style="color:#f87171">Failed to load: '+hesc(e.message)+'</div>';
+    });
 }
 
 
