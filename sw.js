@@ -1,5 +1,5 @@
-// Jarvis SW v7 — Admin tab (Sprint 5b.1: owner-only user list)
-const CACHE = 'jarvis-v7';
+// Jarvis SW v8 — Admin tab fix: "Last active" from real activity (not OTP login)
+const CACHE = 'jarvis-v8';
 
 self.addEventListener('install', function(e) {
   self.skipWaiting();

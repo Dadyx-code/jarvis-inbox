@@ -1139,7 +1139,7 @@ function loadAdmin(){
         s+='</div>';
         s+='<div style="font-size:12px;color:#999;line-height:1.6">'+hesc(u.login_email||u.email||'')+'</div>';
         s+='<div style="font-size:11px;color:#888;line-height:1.6;margin-top:4px"><span style="color:#666">Companies:</span> '+companies+'</div>';
-        s+='<div style="font-size:11px;color:#666;margin-top:4px">Last login: '+(u.last_sign_in_at?ago(u.last_sign_in_at):'never')+(u.role?' &middot; role: '+hesc(u.role):'')+'</div>';
+        s+='<div style="font-size:11px;color:#666;margin-top:4px">Last active: '+(u.last_active_at?ago(u.last_active_at):'never')+(u.role?' &middot; role: '+hesc(u.role):'')+'</div>';
         s+='</div>';
       }
       el.innerHTML=s;
