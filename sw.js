@@ -1,5 +1,5 @@
-// Jarvis SW v12 — Sprint 5b.5b: Activity log section in Admin tab
-const CACHE = 'jarvis-v12';
+// Jarvis SW v13 — Sprint 5c.2.1: shell rebuild + Home (PRISM/GRID)
+const CACHE = 'jarvis-v13';
 
 self.addEventListener('install', function(e) {
   self.skipWaiting();
