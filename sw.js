@@ -1,5 +1,5 @@
-// Jarvis SW v18 — sprint/5c-2-3-approvals-content: Approvals + Content pages live
-const CACHE = 'jarvis-v18';
+// Jarvis SW v19 — sprint/5c-2-4-team: Team page live (Humans, AI specialists, Recent learnings)
+const CACHE = 'jarvis-v19';
 
 self.addEventListener('install', function(e) {
   self.skipWaiting();
