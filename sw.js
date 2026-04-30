@@ -1,5 +1,5 @@
-// Jarvis SW v14 — fix/5c-2-1: light favicon + manifest, Recent visibility
-const CACHE = 'jarvis-v14';
+// Jarvis SW v15 — Sprint 5c.2.2: Tasks page (segmented filter, modals, LP projects)
+const CACHE = 'jarvis-v15';
 
 self.addEventListener('install', function(e) {
   self.skipWaiting();
