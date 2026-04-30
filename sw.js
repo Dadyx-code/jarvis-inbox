@@ -1,5 +1,5 @@
-// Jarvis SW v15 — Sprint 5c.2.2: Tasks page (segmented filter, modals, LP projects)
-const CACHE = 'jarvis-v15';
+// Jarvis SW v16 — fix/5c-2-1-recent: Recent server-backed (cross-device sync)
+const CACHE = 'jarvis-v16';
 
 self.addEventListener('install', function(e) {
   self.skipWaiting();

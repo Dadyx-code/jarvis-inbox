@@ -1285,8 +1285,8 @@ body.drawer-open .fab { opacity: 0; pointer-events: none; }
 
     <div class="feed">
       <section class="feed-section">
-        <h2>Recent <span style="color:var(--text-light);font-family:var(--font-body);font-weight:500;font-size:13px">— from this device</span></h2>
-        <div class="feed-card" id="hl"><div class="es"><svg class="es-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h18M3 12h18M3 17h12"/></svg>Nothing captured yet from this device</div></div>
+        <h2>Recent <span style="color:var(--text-light);font-family:var(--font-body);font-weight:500;font-size:13px">— last 20 captures</span></h2>
+        <div class="feed-card" id="hl"><div class="es"><svg class="es-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h18M3 12h18M3 17h12"/></svg>Loading…</div></div>
       </section>
 
       <section class="feed-section">
@@ -1633,31 +1633,42 @@ document.querySelectorAll('#pris .chip').forEach(function(c){c.addEventListener(
   c.classList.add('active');pri=c.dataset.v;
 })});
 
-/* recent (localStorage, last 20, just from this device) */
-function svh(content,category,priority,company){
-  var h=JSON.parse(localStorage.getItem('ji')||'[]');
-  h.unshift({c:content.substring(0,100)+(content.length>100?'…':''),t:category,p:priority,o:company,tm:new Date().toLocaleTimeString('hr-HR',{hour:'2-digit',minute:'2-digit'}),dt:new Date().toLocaleDateString('hr-HR')});
-  if(h.length>20)h.pop();
-  localStorage.setItem('ji',JSON.stringify(h));
-  rih();
-}
-function rih(){
-  var h=JSON.parse(localStorage.getItem('ji')||'[]');
+/* Recent — server-backed via inbox table. RLS scopes to current user (auth.uid),
+   so this shows YOUR last 20 captures across every device. localStorage history
+   was a 2024-era single-device pattern; replaced for cross-device consistency. */
+function loadRecent(){
   var el=document.getElementById('hl');
-  if(!h.length){el.innerHTML='<div class="es"><svg class="es-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h18M3 12h18M3 17h12"/></svg>Nothing captured yet from this device</div>';return}
-  var s='';
-  for(var i=0;i<h.length;i++){
-    var pillCls='pill-'+h[i].t;
-    s+='<div class="feed-row"><div class="row-line">';
-    s+='<span class="pill '+pillCls+'">'+escHtml(h[i].t)+'</span>';
-    s+='<div class="row-content">';
-    s+='<div class="row-title">'+escHtml(h[i].c)+'</div>';
-    s+='<div class="row-meta">'+escHtml(h[i].dt)+' '+escHtml(h[i].tm);
-    if(h[i].o)s+=' · '+escHtml(h[i].o);
-    if(h[i].p&&h[i].p!=='normal')s+=' · '+escHtml(h[i].p);
-    s+='</div></div></div></div>';
-  }
-  el.innerHTML=s;
+  if(!el)return;
+  fetch(SB+'/rest/v1/inbox?select=id,content,category,priority,company_hint,project_hint,created_at,processed&order=created_at.desc&limit=20',{headers:H})
+    .then(function(r){return r.json()})
+    .then(function(data){
+      data = data || [];
+      if(!data.length){
+        el.innerHTML='<div class="es"><svg class="es-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h18M3 12h18M3 17h12"/></svg>Nothing captured yet</div>';
+        return;
+      }
+      var s='';
+      for(var i=0;i<data.length;i++){
+        var d=data[i];
+        var dt=new Date(d.created_at);
+        var ds=dt.toLocaleDateString('hr-HR')+' '+dt.toLocaleTimeString('hr-HR',{hour:'2-digit',minute:'2-digit'});
+        var pillCls='pill-'+(d.category||'note');
+        s+='<div class="feed-row"><div class="row-line">';
+        s+='<span class="pill '+pillCls+'">'+escHtml(d.category||'')+'</span>';
+        s+='<div class="row-content">';
+        s+='<div class="row-title">'+escHtml(d.content)+'</div>';
+        s+='<div class="row-meta">'+escHtml(ds);
+        if(d.priority&&d.priority!=='normal')s+=' · '+escHtml(d.priority);
+        if(d.company_hint)s+=' · '+escHtml(d.company_hint);
+        if(d.project_hint)s+=' · '+escHtml(d.project_hint);
+        if(d.processed)s+=' · <span style="color:var(--color-success)">processed</span>';
+        s+='</div></div></div></div>';
+      }
+      el.innerHTML=s;
+    })
+    .catch(function(){
+      el.innerHTML='<div class="es">Could not load recent captures</div>';
+    });
 }
 
 /* Send capture */
@@ -1671,10 +1682,9 @@ document.getElementById('sb').addEventListener('click',function(){
   fetch(SB+'/rest/v1/inbox',{method:'POST',headers:Object.assign({},H,{'Prefer':'return=minimal'}),body:JSON.stringify({content:content,category:cat,priority:pri,company_hint:company,project_hint:project})})
     .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);
       ss('st','Sent! Jarvis will process this next session.','ok');
-      svh(content,cat,pri,company);
       document.getElementById('ct').value='';
       if(navigator.vibrate)navigator.vibrate(50);
-      whenAuth(function(){loadQueue()});
+      whenAuth(function(){loadQueue();loadRecent()});
     })
     .catch(function(e){ss('st','Failed: '+e.message,'err')})
     .finally(function(){btn.disabled=false;btn.textContent='Send to Jarvis'});
@@ -1685,8 +1695,7 @@ document.getElementById('ct').addEventListener('keydown',function(ev){
   if((ev.metaKey||ev.ctrlKey)&&ev.key==='Enter'){ev.preventDefault();document.getElementById('sb').click()}
 });
 
-rih();
-whenAuth(function(){loadQueue();loadBriefing();loadOvernight();loadApprovalsCount()});
+whenAuth(function(){loadQueue();loadBriefing();loadOvernight();loadApprovalsCount();loadRecent()});
 
 /* ===== JARVIS QUEUE (server-side unprocessed inbox) ===== */
 function loadQueue(){
