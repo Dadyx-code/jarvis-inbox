@@ -1147,6 +1147,33 @@ body.drawer-open .fab { opacity: 0; pointer-events: none; }
   resize: vertical;
 }
 .ap-actions, .post-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+
+/* === TEAM (5c.2.4) === */
+.team-grid { display: flex; flex-direction: column; gap: var(--space-6); }
+.team-section { min-width: 0; }
+.team-count { font-weight: 500; color: var(--text-light); margin-left: var(--space-2); letter-spacing: 0; text-transform: none; }
+.team-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-2); margin-bottom: 4px; }
+.team-card-name { font-size: 14px; font-weight: 600; color: var(--text-primary); line-height: 1.3; }
+.team-card-tag {
+  font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
+  padding: 2px 6px; border-radius: var(--radius-full); white-space: nowrap; flex-shrink: 0;
+}
+.team-card-tag.human { background: var(--color-info-bg); color: var(--color-info); }
+.team-card-tag.global { background: var(--color-orange-tint); color: var(--color-orange); }
+.team-card-tag.deploy { background: var(--color-success-bg); color: var(--color-success); }
+.team-card-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin-bottom: var(--space-2); }
+.team-card-meta { font-size: 11px; color: var(--text-light); display: flex; gap: var(--space-3); flex-wrap: wrap; }
+.team-card-recent {
+  font-size: 11px; color: var(--text-muted); line-height: 1.5;
+  margin-top: var(--space-2); padding-top: var(--space-2);
+  border-top: 1px solid var(--border-subtle);
+}
+.team-skill { font-size: 11px; font-weight: 600; color: var(--color-orange); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+.team-learning { font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 6px; }
+@media (min-width: 1024px) {
+  .team-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--space-5); align-items: start; }
+}
+
 .ap-btn {
   flex: 1; min-width: 80px;
   background: var(--surface-card);
@@ -1521,12 +1548,21 @@ body.drawer-open .fab { opacity: 0; pointer-events: none; }
 
   <!-- TEAM -->
   <div class="page" id="page-team">
-    <div class="page-header"><h1>Team</h1><div class="sub">Humans, AI specialists, learnings — coming next.</div></div>
-    <div class="placeholder">
-      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M21 21v-2a4 4 0 00-3-3.87M17 3.13a4 4 0 010 7.75"/></svg>
-      <h2>Team lands in 5c.2.3</h2>
-      <p>Humans + AI specialists + this week's learnings, three sections side-by-side at desktop.</p>
-      <span class="sprint-tag">Sprint 5c.2.3</span>
+    <div class="page-header"><h1>Team</h1><div class="sub" id="tm-count">Humans, AI specialists, learnings</div></div>
+    <div id="st-tm" class="st"></div>
+    <div class="team-grid">
+      <section class="team-section">
+        <div class="section-label">Humans <span class="team-count" id="tm-humans-count"></span></div>
+        <div id="tmHumans" class="cards-stack"><div class="es" style="padding:var(--space-5)">Loading…</div></div>
+      </section>
+      <section class="team-section">
+        <div class="section-label">AI specialists <span class="team-count" id="tm-agents-count"></span></div>
+        <div id="tmAgents" class="cards-stack"><div class="es" style="padding:var(--space-5)">Loading…</div></div>
+      </section>
+      <section class="team-section">
+        <div class="section-label">Recent learnings <span class="team-count" id="tm-learn-count"></span></div>
+        <div id="tmLearn" class="cards-stack"><div class="es" style="padding:var(--space-5)">Loading…</div></div>
+      </section>
     </div>
   </div>
 
@@ -2411,6 +2447,143 @@ function copyPost(btn,id){
   bindChipGroup('ccatfilt', function(v){ccatfilt=v; loadContent()});
 })();
 
+/* ===== TEAM PAGE (5c.2.4) ===== */
+function loadTeam(){
+  var tmEmp = SB+'/rest/v1/v_employee_activity?select=user_id,employee_name,knowledge_type,title,created_at&order=created_at.desc&limit=200';
+  var tmAg  = SB+'/rest/v1/registry_active_agents?select=name,kind,scope,scope_deploy,description,updated_at&order=name.asc&limit=80';
+  var tmRun = SB+'/rest/v1/agent_results?select=agent_name,status,created_at&order=created_at.desc&limit=80';
+  var tmLrn = SB+'/rest/v1/skill_learnings?select=id,skill_name,learning,created_at&order=created_at.desc&limit=15';
+  var fopt = {headers:H};
+  Promise.all([
+    fetch(tmEmp,fopt).then(function(r){return r.json()}).catch(function(){return []}),
+    fetch(tmAg,fopt).then(function(r){return r.json()}).catch(function(){return []}),
+    fetch(tmRun,fopt).then(function(r){return r.json()}).catch(function(){return []}),
+    fetch(tmLrn,fopt).then(function(r){return r.json()}).catch(function(){return []})
+  ]).then(function(results){
+    var emp=results[0]||[], ag=results[1]||[], runs=results[2]||[], lrn=results[3]||[];
+    paintTeamHumans(emp);
+    paintTeamAgents(ag, runs);
+    paintTeamLearnings(lrn);
+    var totals=[];
+    if(emp.length) totals.push((groupCount(emp,'employee_name'))+' humans');
+    if(ag.length)  totals.push(ag.length+' agents');
+    if(lrn.length) totals.push(lrn.length+' learnings');
+    var sub=document.getElementById('tm-count');
+    if(sub) sub.textContent = totals.join(' • ') || 'Humans, AI specialists, learnings';
+  }).catch(function(e){
+    ss('st-tm','Failed to load: '+e.message,'err');
+  });
+}
+
+function groupCount(rows, key){
+  var seen={};
+  for(var i=0;i<rows.length;i++){ var k=rows[i][key]; if(k) seen[k]=1; }
+  return Object.keys(seen).length;
+}
+
+function paintTeamHumans(rows){
+  var el=document.getElementById('tmHumans');
+  var lbl=document.getElementById('tm-humans-count');
+  if(!el) return;
+  if(!rows.length){
+    el.innerHTML='<div class="es" style="padding:var(--space-5)">No employee activity yet.</div>';
+    if(lbl) lbl.textContent='';
+    return;
+  }
+  /* group by employee_name, capture last_active and recent titles */
+  var by={};
+  for(var i=0;i<rows.length;i++){
+    var r=rows[i]; var n=r.employee_name; if(!n) continue;
+    if(!by[n]) by[n]={name:n, count:0, last:r.created_at, recent:[]};
+    by[n].count++;
+    if(by[n].recent.length<2 && r.title) by[n].recent.push(r.title);
+    if(new Date(r.created_at) > new Date(by[n].last)) by[n].last=r.created_at;
+  }
+  var list=Object.keys(by).map(function(k){return by[k]}).sort(function(a,b){
+    return new Date(b.last)-new Date(a.last);
+  });
+  if(lbl) lbl.textContent = '('+list.length+')';
+  var html=list.map(function(p){
+    var recent=p.recent.length
+      ? '<div class="team-card-recent">'+p.recent.map(function(t){return '· '+hesc(t)}).join('<br>')+'</div>'
+      : '';
+    return '<div class="card-item">'+
+      '<div class="team-card-head">'+
+        '<div class="team-card-name">'+hesc(p.name)+'</div>'+
+        '<span class="team-card-tag human">human</span>'+
+      '</div>'+
+      '<div class="team-card-meta">'+
+        '<span>'+p.count+' note'+(p.count===1?'':'s')+'</span>'+
+        '<span>last active '+timeAgo(p.last)+'</span>'+
+      '</div>'+
+      recent+
+    '</div>';
+  }).join('');
+  el.innerHTML=html;
+}
+
+function paintTeamAgents(agents, runs){
+  var el=document.getElementById('tmAgents');
+  var lbl=document.getElementById('tm-agents-count');
+  if(!el) return;
+  if(!agents.length){
+    el.innerHTML='<div class="es" style="padding:var(--space-5)">No agents registered.</div>';
+    if(lbl) lbl.textContent='';
+    return;
+  }
+  /* most recent run per agent_name */
+  var lastRun={};
+  for(var i=0;i<runs.length;i++){
+    var r=runs[i];
+    if(!lastRun[r.agent_name]) lastRun[r.agent_name]=r;
+  }
+  if(lbl) lbl.textContent = '('+agents.length+')';
+  var html=agents.map(function(a){
+    var tag='global', tagLabel='global';
+    if(a.kind==='employee_scoped' || a.scope==='deploy'){
+      tag='deploy';
+      tagLabel = a.scope_deploy ? ('deploy: '+a.scope_deploy) : 'deploy';
+    }
+    var run=lastRun[a.name];
+    var runLine='';
+    if(run){
+      runLine = '<div class="team-card-recent">last run '+timeAgo(run.created_at)+
+        (run.status?' · '+hesc(run.status):'')+'</div>';
+    }
+    return '<div class="card-item">'+
+      '<div class="team-card-head">'+
+        '<div class="team-card-name">'+hesc(a.name)+'</div>'+
+        '<span class="team-card-tag '+tag+'">'+hesc(tagLabel)+'</span>'+
+      '</div>'+
+      (a.description?'<div class="team-card-desc">'+hesc(a.description)+'</div>':'')+
+      runLine+
+    '</div>';
+  }).join('');
+  el.innerHTML=html;
+}
+
+function paintTeamLearnings(rows){
+  var el=document.getElementById('tmLearn');
+  var lbl=document.getElementById('tm-learn-count');
+  if(!el) return;
+  if(!rows.length){
+    el.innerHTML='<div class="es" style="padding:var(--space-5)">No learnings captured yet.</div>';
+    if(lbl) lbl.textContent='';
+    return;
+  }
+  if(lbl) lbl.textContent = '('+rows.length+')';
+  var html=rows.map(function(l){
+    var text=l.learning||'';
+    if(text.length>320) text=text.substring(0,320)+'…';
+    return '<div class="card-item">'+
+      '<div class="team-skill">'+hesc(l.skill_name||'unknown')+'</div>'+
+      '<div class="team-learning">'+hesc(text)+'</div>'+
+      '<div class="team-card-meta"><span>'+timeAgo(l.created_at)+'</span></div>'+
+    '</div>';
+  }).join('');
+  el.innerHTML=html;
+}
+
 /* ===== TASKS PAGE (5c.2.2) ===== */
 var TASK_CACHE = {};
 var taskFilter = 'active'; /* active | completed */
@@ -2739,8 +2912,8 @@ function ensureTasksLoaded(){
   whenAuth(function(){loadTasks();loadLPProjects()});
 }
 
-/* Approvals + Content lazy-load (5c.2.3) */
-var _approvalsLoaded=false, _contentLoaded=false;
+/* Approvals + Content + Team lazy-load (5c.2.3, 5c.2.4) */
+var _approvalsLoaded=false, _contentLoaded=false, _teamLoaded=false;
 function ensureApprovalsLoaded(){
   if(_approvalsLoaded) { whenAuth(loadApprovals); return; }
   _approvalsLoaded=true;
@@ -2751,6 +2924,11 @@ function ensureContentLoaded(){
   _contentLoaded=true;
   whenAuth(loadContent);
 }
+function ensureTeamLoaded(){
+  if(_teamLoaded) { whenAuth(loadTeam); return; }
+  _teamLoaded=true;
+  whenAuth(loadTeam);
+}
 
 /* Hook into navigate() — augment it to trigger lazy loads per page */
 var _origNavigate = navigate;
@@ -2759,12 +2937,13 @@ navigate = function(pageId){
   if(pageId==='tasks')     ensureTasksLoaded();
   if(pageId==='approvals') ensureApprovalsLoaded();
   if(pageId==='content')   ensureContentLoaded();
+  if(pageId==='team')      ensureTeamLoaded();
 };
 
 /* if URL hash points to a lazy page on first load, trigger its load */
 whenAuth(function(){
   var h=(window.location.hash||'').replace(/^#/,'');
-  if(h==='tasks'||h==='approvals'||h==='content') navigate(h);
+  if(h==='tasks'||h==='approvals'||h==='content'||h==='team') navigate(h);
 });
 
 /* ===== SERVICE WORKER ===== */
