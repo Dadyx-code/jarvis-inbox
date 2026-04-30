@@ -139,6 +139,18 @@ body:not(.locked) #loginGate{display:none !important}
 .user-action-btn.ua-enable:hover{background:#0d2a14}
 .user-action-btn.ua-edit-co{border:1px solid #2a1a0a;color:#888}
 .user-action-btn.ua-edit-co:hover{background:#1a1710;color:#aaa}
+/* audit log section (Sprint 5b.5b) */
+.audit-row{background:#14120e;border:1px solid #1a1710;border-radius:10px;padding:10px 12px;margin-bottom:6px}
+.audit-line{display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap}
+.audit-badge{font-size:9px;letter-spacing:.5px;font-weight:700;padding:2px 8px;border-radius:8px;border:1px solid;flex-shrink:0;line-height:1.4}
+.audit-summary{font-size:13px;color:#ccc;line-height:1.5;flex:1;min-width:200px}
+.audit-meta{font-size:10px;color:#555;margin-top:4px}
+.audit-badge.audit-invite{border-color:#5f3a1e;color:#F58025;background:#2e1a0a}
+.audit-badge.audit-cancel_invite{border-color:#7f1d1d;color:#f87171;background:#2e0a0a}
+.audit-badge.audit-disable{border-color:#7c2d12;color:#fb923c;background:#2e1a0a}
+.audit-badge.audit-enable{border-color:#166534;color:#4ade80;background:#0a2e1a}
+.audit-badge.audit-reassign{border-color:#374151;color:#9ca3af;background:#111827}
+.audit-badge.audit-default{border-color:#2a1a0a;color:#888;background:#0f0d0a}
 /* edit-companies checklist (Sprint 5b.4) */
 .edit-co-list{max-height:50vh;overflow-y:auto;background:#0f0d0a;border:1px solid #2a1a0a;border-radius:8px;padding:8px;margin-bottom:8px}
 .edit-co-row{display:flex;align-items:center;gap:10px;padding:10px 8px;border-radius:6px;cursor:pointer;color:#ccc;font-size:14px}
@@ -269,6 +281,8 @@ body:not(.locked) #loginGate{display:none !important}
 <div class="section-label" style="margin-top:8px">Users</div>
 <button class="invite-trigger" id="inviteBtn">+ Invite user</button>
 <div id="adminUsers"><div class="es">Loading...</div></div>
+<div class="section-label" style="margin-top:24px">Activity log</div>
+<div id="auditLog"><div class="es">Loading...</div></div>
 </div>
 
 <!-- INVITE USER MODAL (Sprint 5b.2) -->
@@ -438,7 +452,7 @@ document.querySelectorAll('.tab').forEach(function(t){t.addEventListener('click'
   if(t.dataset.p==='content') loadContent();
   if(t.dataset.p==='approvals') loadApprovals();
   if(t.dataset.p==='team') loadTeam();
-  if(t.dataset.p==='admin') loadAdmin();
+  if(t.dataset.p==='admin'){loadAdmin();loadAuditLog()}
 })});
 
 /* --- INBOX --- */
@@ -1267,7 +1281,7 @@ function submitInvite(ev){
     .then(function(d){
       closeInviteModal();
       showOtpResult(d);
-      loadAdmin();
+      loadAdmin();loadAuditLog();
     })
     .catch(function(e){
       errEl.textContent=e.message;errEl.classList.add('show');
@@ -1340,7 +1354,7 @@ function runUserAction(action,userId,userName,onDone){
     .then(function(){
       var verb=action==='cancel'?'Invite cancelled':(action==='disable'?'Disabled':'Re-enabled');
       st.className='st ok';st.textContent=verb+': '+userName;
-      loadAdmin();
+      loadAdmin();loadAuditLog();
       if(onDone) onDone();
     })
     .catch(function(e){
@@ -1432,7 +1446,7 @@ function submitCompaniesEdit(ev){
       var added=(d.companies_added||[]).length;var removed=(d.companies_removed||[]).length;
       var msg=(added===0&&removed===0)?('No changes for '+name):('Updated '+name+': +'+added+' / -'+removed);
       st.className='st ok';st.textContent=msg;
-      closeCompaniesModal();loadAdmin();
+      closeCompaniesModal();loadAdmin();loadAuditLog();
     })
     .catch(function(e){
       errEl.textContent=e.message;errEl.classList.add('show');
@@ -1442,6 +1456,66 @@ function submitCompaniesEdit(ev){
 document.getElementById('editCoCancelBtn').addEventListener('click',closeCompaniesModal);
 document.getElementById('editCoForm').addEventListener('submit',submitCompaniesEdit);
 /* ===== end edit-companies flow ===== */
+
+/* ===== Activity log (Sprint 5b.5b) ===== */
+/* Renders the most recent admin audit rows with action-type-aware text. */
+function renderAuditSummary(row){
+  var actor=hesc(row.actor_name||'(unknown)');
+  var d=row.details||{};
+  switch(row.action_type){
+    case 'invite':
+      return actor+' invited <b>'+hesc(d.name||'(no name)')+'</b> ('+hesc(d.email||'')+') to '+hesc(d.company_name||'(unknown company)');
+    case 'cancel_invite':
+      var su=d.snapshot_user||{};
+      var coArr=d.snapshot_companies||[];
+      var coNames=coArr.map(function(c){return hesc(c.name||'')}).join(', ');
+      return actor+' cancelled invite for <b>'+hesc(su.name||'(no name)')+'</b> ('+hesc(su.email||'')+')'+(coNames?' — '+coNames:'');
+    case 'disable':
+      return actor+' disabled <b>'+hesc(d.target_name||row.target_name||'(unknown)')+'</b>';
+    case 'enable':
+      return actor+' re-enabled <b>'+hesc(d.target_name||row.target_name||'(unknown)')+'</b>';
+    case 'reassign':
+      var name=hesc(d.target_name||row.target_name||'(unknown)');
+      if(d.is_noop) return actor+' reviewed companies for <b>'+name+'</b> <span style="color:#666">(no change)</span>';
+      var oldNames=(d.old_companies||[]).map(function(c){return hesc(c.name||'')}).join(', ')||'<span style="color:#666">none</span>';
+      var newNames=(d.new_companies||[]).map(function(c){return hesc(c.name||'')}).join(', ')||'<span style="color:#666">none</span>';
+      return actor+' updated companies for <b>'+name+'</b>: '+oldNames+' → '+newNames;
+    default:
+      return actor+' '+hesc(row.action_type);
+  }
+}
+function auditBadgeClass(action_type){
+  /* Whitelist known classes; unknown actions get the default badge so the
+     CSS doesn't get polluted by attacker-controlled class names. */
+  var known={invite:1,cancel_invite:1,disable:1,enable:1,reassign:1};
+  return known[action_type]?('audit-'+action_type):'audit-default';
+}
+function loadAuditLog(){
+  var el=document.getElementById('auditLog');
+  el.innerHTML='<div class="es">Loading...</div>';
+  fetch(SB+'/rest/v1/rpc/admin_list_audit_log',{method:'POST',headers:H,body:JSON.stringify({p_limit:50})})
+    .then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.message||('HTTP '+r.status));return d})})
+    .then(function(rows){
+      if(!rows||!rows.length){el.innerHTML='<div class="es">No admin actions yet</div>';return}
+      var s='';
+      for(var i=0;i<rows.length;i++){
+        var row=rows[i];
+        var label=(row.action_type||'').toUpperCase().replace(/_/g,' ');
+        s+='<div class="audit-row">';
+        s+='<div class="audit-line">';
+        s+='<span class="audit-badge '+auditBadgeClass(row.action_type)+'">'+hesc(label)+'</span>';
+        s+='<span class="audit-summary">'+renderAuditSummary(row)+'</span>';
+        s+='</div>';
+        s+='<div class="audit-meta">'+ago(row.created_at)+' &middot; '+new Date(row.created_at).toLocaleString()+'</div>';
+        s+='</div>';
+      }
+      el.innerHTML=s;
+    })
+    .catch(function(e){
+      el.innerHTML='<div class="es" style="color:#f87171">Failed to load: '+hesc(e.message)+'</div>';
+    });
+}
+/* ===== end activity log ===== */
 
 function loadAdmin(){
   var el=document.getElementById('adminUsers');
