@@ -128,6 +128,15 @@ body:not(.locked) #loginGate{display:none !important}
 .copy-flash{background:#0d2a14 !important;color:#4ade80 !important;border-color:#166534 !important}
 .invite-trigger{background:#14120e;border:1px solid #F58025;color:#F58025;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:12px;-webkit-tap-highlight-color:transparent}
 .invite-trigger:active{transform:scale(.98);background:#2e1a0a}
+/* per-user action buttons (Sprint 5b.3) */
+.user-action-btn{padding:5px 12px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;background:#14120e;letter-spacing:.3px;-webkit-tap-highlight-color:transparent;transition:transform .1s}
+.user-action-btn:active{transform:scale(.96)}
+.user-action-btn.ua-cancel{border:1px solid #7f1d1d;color:#f87171}
+.user-action-btn.ua-cancel:hover{background:#2e0a0a}
+.user-action-btn.ua-disable{border:1px solid #5f3a1e;color:#fb923c}
+.user-action-btn.ua-disable:hover{background:#2e1a0a}
+.user-action-btn.ua-enable{border:1px solid #166534;color:#4ade80}
+.user-action-btn.ua-enable:hover{background:#0d2a14}
 </style>
 </head>
 <body class="locked">
@@ -270,6 +279,18 @@ body:not(.locked) #loginGate{display:none !important}
         <button type="submit" class="btn" id="invSubmitBtn">Send invite</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- CONFIRM MODAL (Sprint 5b.3 — shared destructive-action confirm) -->
+<div class="modal-veil" id="confirmVeil">
+  <div class="modal-box">
+    <h2>Confirm</h2>
+    <div class="sub" id="confirmMsg" style="color:#ccc;margin-bottom:18px;line-height:1.6">—</div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-cancel" id="confirmCancelBtn">Cancel</button>
+      <button type="button" class="btn" id="confirmOkBtn" style="background:#7f1d1d">Confirm</button>
+    </div>
   </div>
 </div>
 
@@ -1250,6 +1271,76 @@ document.getElementById('inviteForm').addEventListener('submit',submitInvite);
 document.getElementById('otpDoneBtn').addEventListener('click',function(){document.getElementById('otpVeil').classList.remove('on')});
 /* ===== end invite-user flow ===== */
 
+/* ===== User-lifecycle actions (Sprint 5b.3) ===== */
+/* Renders Cancel / Disable / Enable buttons per user row. Owner row gets none. */
+function adminUserActions(u,disabled){
+  if(u.is_owner) return ''; /* owner cannot be modified */
+  var html='<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">';
+  if(disabled){
+    html+='<button class="user-action-btn ua-enable" data-action="enable" data-uid="'+u.id+'" data-name="'+hesc(u.name||'')+'">Re-enable</button>';
+  }else if(!u.last_sign_in_at){
+    /* Never signed in → invite cancellation. Same condition the SQL enforces. */
+    html+='<button class="user-action-btn ua-cancel" data-action="cancel" data-uid="'+u.id+'" data-name="'+hesc(u.name||'')+'">Cancel invite</button>';
+  }else{
+    html+='<button class="user-action-btn ua-disable" data-action="disable" data-uid="'+u.id+'" data-name="'+hesc(u.name||'')+'">Disable</button>';
+  }
+  html+='</div>';
+  return html;
+}
+
+/* Confirm-and-execute. cancel + disable need a confirm; enable runs directly. */
+function userActionClick(action,userId,userName){
+  if(action==='enable'){runUserAction(action,userId,userName,null);return}
+  var msg;
+  if(action==='cancel'){
+    msg='Permanently delete this invite for '+userName+'? The user will be removed; the audit log entry will be preserved.';
+  }else if(action==='disable'){
+    msg='Disable '+userName+'? They will not be able to sign in until you re-enable them.';
+  }else{return}
+  openConfirm(msg,function(){runUserAction(action,userId,userName,null)});
+}
+
+function runUserAction(action,userId,userName,onDone){
+  var st=document.getElementById('st6');
+  st.className='st wait';st.textContent='Updating '+userName+'...';
+  fetch(SB+'/functions/v1/admin-set-user-status',{
+    method:'POST',headers:H,
+    body:JSON.stringify({user_id:userId,action:action})
+  })
+    .then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.error||('HTTP '+r.status)+(d.detail?' — '+d.detail:''));return d})})
+    .then(function(){
+      var verb=action==='cancel'?'Invite cancelled':(action==='disable'?'Disabled':'Re-enabled');
+      st.className='st ok';st.textContent=verb+': '+userName;
+      loadAdmin();
+      if(onDone) onDone();
+    })
+    .catch(function(e){
+      st.className='st err';st.textContent=e.message;
+    });
+}
+
+/* Lightweight confirm modal (shared with future admin actions) */
+function openConfirm(message,onConfirm){
+  document.getElementById('confirmMsg').textContent=message;
+  var ok=document.getElementById('confirmOkBtn');
+  /* Re-bind every open to capture this onConfirm closure */
+  ok.onclick=function(){closeConfirm();onConfirm()};
+  document.getElementById('confirmVeil').classList.add('on');
+}
+function closeConfirm(){document.getElementById('confirmVeil').classList.remove('on')}
+
+/* Click delegation on the admin user list. */
+document.getElementById('adminUsers').addEventListener('click',function(ev){
+  var btn=ev.target.closest('.user-action-btn');
+  if(!btn) return;
+  var action=btn.dataset.action;
+  var uid=btn.dataset.uid;
+  var name=btn.dataset.name;
+  userActionClick(action,uid,name);
+});
+document.getElementById('confirmCancelBtn').addEventListener('click',closeConfirm);
+/* ===== end user-lifecycle actions ===== */
+
 function loadAdmin(){
   var el=document.getElementById('adminUsers');
   el.innerHTML='<div class="es">Loading...</div>';
@@ -1274,6 +1365,7 @@ function loadAdmin(){
         s+='<div style="font-size:12px;color:#999;line-height:1.6">'+hesc(u.login_email||u.email||'')+'</div>';
         s+='<div style="font-size:11px;color:#888;line-height:1.6;margin-top:4px"><span style="color:#666">Companies:</span> '+companies+'</div>';
         s+='<div style="font-size:11px;color:#666;margin-top:4px">Last active: '+(u.last_active_at?ago(u.last_active_at):'never')+(u.role?' &middot; role: '+hesc(u.role):'')+'</div>';
+        s+=adminUserActions(u,disabled);
         s+='</div>';
       }
       el.innerHTML=s;
