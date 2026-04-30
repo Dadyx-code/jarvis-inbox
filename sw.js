@@ -1,5 +1,5 @@
-// Jarvis SW v8 — Admin tab fix: "Last active" from real activity (not OTP login)
-const CACHE = 'jarvis-v8';
+// Jarvis SW v9 — Sprint 5b.2: Invite-user flow (Invite button, modal, OTP result)
+const CACHE = 'jarvis-v9';
 
 self.addEventListener('install', function(e) {
   self.skipWaiting();
