@@ -1,5 +1,5 @@
-// Jarvis SW v13 — Sprint 5c.2.1: shell rebuild + Home (PRISM/GRID)
-const CACHE = 'jarvis-v13';
+// Jarvis SW v14 — fix/5c-2-1: light favicon + manifest, Recent visibility
+const CACHE = 'jarvis-v14';
 
 self.addEventListener('install', function(e) {
   self.skipWaiting();

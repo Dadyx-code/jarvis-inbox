@@ -601,6 +601,7 @@ main {
 /* === FEED GRID === */
 .feed { display: grid; grid-template-columns: 1fr; gap: var(--space-5); }
 @media (min-width: 768px) { .feed { grid-template-columns: 1fr 1fr; } }
+.feed-section { min-width: 0; } /* prevent grid items from auto-expanding past 1fr */
 .feed-section h2 { margin-bottom: var(--space-3); }
 
 .feed-card {
@@ -636,7 +637,14 @@ main {
   border: none;
 }
 .feed-row .row-action:hover { background: var(--color-orange-tint); }
-.es { text-align: center; color: var(--text-light); font-size: 13px; padding: var(--space-4); }
+.es { text-align: center; color: var(--text-light); font-size: 13px; padding: var(--space-5) var(--space-4); }
+.es .es-icon {
+  display: block;
+  width: 32px; height: 32px;
+  margin: 0 auto var(--space-2);
+  color: var(--text-disabled);
+  opacity: 0.7;
+}
 
 /* status pills */
 .pill {
@@ -1002,7 +1010,7 @@ body.drawer-open .fab { opacity: 0; pointer-events: none; }
     <div class="feed">
       <section class="feed-section">
         <h2>Recent <span style="color:var(--text-light);font-family:var(--font-body);font-weight:500;font-size:13px">— from this device</span></h2>
-        <div class="feed-card" id="hl"><div class="es">No entries yet</div></div>
+        <div class="feed-card" id="hl"><div class="es"><svg class="es-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h18M3 12h18M3 17h12"/></svg>Nothing captured yet from this device</div></div>
       </section>
 
       <section class="feed-section">
@@ -1289,7 +1297,7 @@ function svh(content,category,priority,company){
 function rih(){
   var h=JSON.parse(localStorage.getItem('ji')||'[]');
   var el=document.getElementById('hl');
-  if(!h.length){el.innerHTML='<div class="es">No entries yet</div>';return}
+  if(!h.length){el.innerHTML='<div class="es"><svg class="es-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h18M3 12h18M3 17h12"/></svg>Nothing captured yet from this device</div>';return}
   var s='';
   for(var i=0;i<h.length;i++){
     var pillCls='pill-'+h[i].t;
