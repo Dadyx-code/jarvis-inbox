@@ -1,5 +1,5 @@
-// Jarvis SW v11 — Sprint 5b.4: Edit companies (multi-select reassignment)
-const CACHE = 'jarvis-v11';
+// Jarvis SW v12 — Sprint 5b.5b: Activity log section in Admin tab
+const CACHE = 'jarvis-v12';
 
 self.addEventListener('install', function(e) {
   self.skipWaiting();
