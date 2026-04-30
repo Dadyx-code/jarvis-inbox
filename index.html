@@ -1246,6 +1246,88 @@ body.drawer-open .fab { opacity: 0; pointer-events: none; }
 }
 .modal-err.show { display: block; }
 
+/* === ADMIN ACTIONS (5c.2.5b) — lifecycle + edit-companies + audit log === */
+.user-card-actions {
+  display: flex; gap: 6px; flex-wrap: wrap;
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+.user-action-btn {
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  font-size: 12px; font-weight: 500;
+  font-family: inherit; cursor: pointer;
+  background: var(--surface-card);
+  border: 1px solid var(--border-default);
+  color: var(--text-secondary);
+  transition: all var(--motion-fast);
+  -webkit-tap-highlight-color: transparent;
+}
+.user-action-btn:hover { background: var(--surface-hover); }
+.user-action-btn:active { transform: scale(0.97); }
+.user-action-btn.ua-edit-co { /* default neutral */ }
+.user-action-btn.ua-cancel  { color: var(--color-danger);  border-color: var(--color-danger-border); }
+.user-action-btn.ua-cancel:hover  { background: var(--color-danger-bg); }
+.user-action-btn.ua-disable { color: var(--color-warning); border-color: var(--color-warning-border); }
+.user-action-btn.ua-disable:hover { background: var(--color-warning-bg); }
+.user-action-btn.ua-enable  { color: var(--color-success); border-color: var(--color-success-border); }
+.user-action-btn.ua-enable:hover  { background: var(--color-success-bg); }
+
+/* Edit-companies modal — checkbox list */
+.edit-co-list {
+  max-height: 50vh; overflow-y: auto;
+  background: var(--surface-muted);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+.edit-co-row {
+  display: flex; align-items: center; gap: var(--space-3);
+  padding: 10px var(--space-2);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--text-primary); font-size: 14px;
+  transition: background var(--motion-fast);
+}
+.edit-co-row:hover { background: var(--surface-card); }
+.edit-co-row input[type=checkbox] {
+  width: 18px; height: 18px;
+  accent-color: var(--color-orange);
+  margin: 0; cursor: pointer;
+}
+.edit-co-foot { font-size: 11px; color: var(--text-muted); margin-bottom: var(--space-2); }
+
+/* Activity log */
+.audit-section-head { margin-top: var(--space-6); margin-bottom: var(--space-3); }
+.audit-row {
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 10px var(--space-3);
+  margin-bottom: var(--space-2);
+}
+.audit-line { display: flex; align-items: flex-start; gap: var(--space-2); flex-wrap: wrap; }
+.audit-badge {
+  font-size: 9px; letter-spacing: 0.5px; font-weight: 700;
+  padding: 2px 8px; border-radius: var(--radius-full);
+  border: 1px solid; flex-shrink: 0; line-height: 1.4;
+  text-transform: uppercase;
+}
+.audit-summary {
+  font-size: 13px; color: var(--text-secondary); line-height: 1.5;
+  flex: 1; min-width: 200px;
+}
+.audit-summary b { color: var(--text-primary); font-weight: 600; }
+.audit-meta { font-size: 10px; color: var(--text-light); margin-top: 4px; }
+.audit-badge.audit-invite        { color: var(--color-orange);  background: var(--color-orange-tint); border-color: var(--color-orange-border); }
+.audit-badge.audit-cancel_invite { color: var(--color-danger);  background: var(--color-danger-bg);  border-color: var(--color-danger-border); }
+.audit-badge.audit-disable       { color: var(--color-warning); background: var(--color-warning-bg); border-color: var(--color-warning-border); }
+.audit-badge.audit-enable        { color: var(--color-success); background: var(--color-success-bg); border-color: var(--color-success-border); }
+.audit-badge.audit-reassign      { color: var(--color-info);    background: var(--color-info-bg);    border-color: var(--color-info-border); }
+.audit-badge.audit-default       { color: var(--text-muted);    background: var(--color-neutral-bg); border-color: var(--color-neutral-border); }
+
 .ap-btn {
   flex: 1; min-width: 80px;
   background: var(--surface-card);
@@ -1649,7 +1731,10 @@ body.drawer-open .fab { opacity: 0; pointer-events: none; }
     </div>
     <div id="adminUsers" class="cards-stack"><div class="es" style="padding:var(--space-5)">Loading…</div></div>
 
-    <!-- Activity log + lifecycle actions ship in Sprint 5c.2.5b -->
+    <div class="audit-section-head">
+      <div class="section-label">Activity log <span class="team-count" id="ad-audit-count"></span></div>
+    </div>
+    <div id="auditLog"><div class="es" style="padding:var(--space-5)">Loading…</div></div>
   </div>
 
   <!-- ACCOUNT (Settings) -->
@@ -1759,6 +1844,35 @@ body.drawer-open .fab { opacity: 0; pointer-events: none; }
     <div class="otp-hint">Send this code via Slack DM. Do not paste it in a public channel — preview bots can consume one-time codes. The code is shown once and never logged.</div>
     <div class="modal-actions" style="margin-top:var(--space-3)">
       <button type="button" class="btn-modal cancel" id="otpDoneBtn">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ EDIT COMPANIES MODAL (5c.2.5b) ============ -->
+<div class="modal-veil" id="editCoVeil" aria-hidden="true">
+  <div class="modal-box" role="dialog" aria-labelledby="editCoTitle">
+    <h2 id="editCoTitle">Edit companies</h2>
+    <div class="sub" id="editCoSub">—</div>
+    <div class="modal-err" id="editCoErr"></div>
+    <form id="editCoForm">
+      <div class="edit-co-list" id="editCoList"><div class="es">Loading…</div></div>
+      <div class="edit-co-foot">Empty selection is allowed (user keeps account but loses all company access).</div>
+      <div class="modal-actions">
+        <button type="button" class="btn-modal cancel" id="editCoCancelBtn">Cancel</button>
+        <button type="submit" class="btn-modal primary" id="editCoSaveBtn">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============ CONFIRM MODAL (5c.2.5b) — shared destructive-action confirm ============ -->
+<div class="modal-veil" id="confirmVeil" aria-hidden="true">
+  <div class="modal-box" role="dialog" aria-labelledby="confirmTitle">
+    <h2 id="confirmTitle">Confirm</h2>
+    <div class="sub" id="confirmMsg" style="line-height:1.6">—</div>
+    <div class="modal-actions" style="margin-top:var(--space-4)">
+      <button type="button" class="btn-modal cancel" id="confirmCancelBtn">Cancel</button>
+      <button type="button" class="btn-modal danger" id="confirmOkBtn">Confirm</button>
     </div>
   </div>
 </div>
@@ -2739,6 +2853,7 @@ function loadAdminUsers(){
           '<div class="user-card-email">'+hesc(u.login_email||u.email||'')+'</div>'+
           '<div class="user-card-companies">'+companiesHtml+'</div>'+
           '<div class="user-card-meta">Last active: '+lastActive+roleSuffix+'</div>'+
+          adminUserActions(u, disabled)+
         '</div>';
       }).join('');
       el.innerHTML=html;
@@ -2794,6 +2909,7 @@ function submitInvite(ev){
       closeInviteModal();
       showOtpResult(d);
       loadAdminUsers();
+      loadAuditLog();
     })
     .catch(function(e){
       errEl.textContent=e.message; errEl.classList.add('show');
@@ -2830,6 +2946,232 @@ function showOtpResult(d){
   if(inviteForm) inviteForm.addEventListener('submit',submitInvite);
   if(otpDone) otpDone.addEventListener('click',function(){document.getElementById('otpVeil').classList.remove('on')});
 })();
+
+/* ===== ADMIN LIFECYCLE + EDIT-COMPANIES + AUDIT LOG (5c.2.5b) ===== */
+
+/* Per-row action buttons. Owner row gets none.
+   Lifecycle button is state-aware: disabled→Re-enable, never-signed-in→Cancel invite, else→Disable. */
+function adminUserActions(u, disabled){
+  if(u.is_owner) return ''; /* owner cannot be modified */
+  var html='<div class="user-card-actions">';
+  var companiesPayload=encodeURIComponent(JSON.stringify(u.companies||[]));
+  html+='<button class="user-action-btn ua-edit-co" data-action="edit-companies" data-uid="'+u.id+'" data-name="'+hesc(u.name||'')+'" data-email="'+hesc(u.login_email||u.email||'')+'" data-companies="'+companiesPayload+'">Edit companies</button>';
+  if(disabled){
+    html+='<button class="user-action-btn ua-enable" data-action="enable" data-uid="'+u.id+'" data-name="'+hesc(u.name||'')+'">Re-enable</button>';
+  }else if(!u.last_sign_in_at){
+    html+='<button class="user-action-btn ua-cancel" data-action="cancel" data-uid="'+u.id+'" data-name="'+hesc(u.name||'')+'">Cancel invite</button>';
+  }else{
+    html+='<button class="user-action-btn ua-disable" data-action="disable" data-uid="'+u.id+'" data-name="'+hesc(u.name||'')+'">Disable</button>';
+  }
+  html+='</div>';
+  return html;
+}
+
+/* Confirm-and-execute. cancel + disable need a confirm; enable runs directly. */
+function userActionClick(action, userId, userName){
+  if(action==='enable'){runUserAction(action,userId,userName);return}
+  var msg;
+  if(action==='cancel'){
+    msg='Permanently delete this invite for '+userName+'? The user will be removed; the audit log entry will be preserved.';
+  }else if(action==='disable'){
+    msg='Disable '+userName+'? They will not be able to sign in until you re-enable them.';
+  }else{return}
+  openConfirm(msg,function(){runUserAction(action,userId,userName)});
+}
+
+function runUserAction(action, userId, userName){
+  ss('st-ad','Updating '+userName+'…','wait');
+  fetch(SB+'/functions/v1/admin-set-user-status',{
+    method:'POST',headers:H,
+    body:JSON.stringify({user_id:userId,action:action})
+  })
+    .then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.error||('HTTP '+r.status)+(d.detail?' — '+d.detail:''));return d})})
+    .then(function(){
+      var verb=action==='cancel'?'Invite cancelled':(action==='disable'?'Disabled':'Re-enabled');
+      ss('st-ad',verb+': '+userName,'ok');
+      loadAdminUsers(); loadAuditLog();
+    })
+    .catch(function(e){ ss('st-ad',e.message,'err'); });
+}
+
+/* Confirm modal — generic, reused for any destructive action */
+function openConfirm(message,onConfirm){
+  document.getElementById('confirmMsg').textContent=message;
+  var ok=document.getElementById('confirmOkBtn');
+  ok.onclick=function(){closeConfirm(); onConfirm()};
+  document.getElementById('confirmVeil').classList.add('on');
+}
+function closeConfirm(){document.getElementById('confirmVeil').classList.remove('on')}
+
+/* Click delegation on the admin user list — single listener for all action buttons */
+(function wireAdminActions(){
+  var list=document.getElementById('adminUsers');
+  if(!list) return;
+  list.addEventListener('click',function(ev){
+    var btn=ev.target.closest('.user-action-btn');
+    if(!btn) return;
+    var action=btn.dataset.action;
+    if(action==='edit-companies'){
+      var current=[];
+      try{current=JSON.parse(decodeURIComponent(btn.dataset.companies||'[]'))}catch(e){}
+      openCompaniesModal(btn.dataset.uid, btn.dataset.name, btn.dataset.email, current);
+      return;
+    }
+    userActionClick(action, btn.dataset.uid, btn.dataset.name);
+  });
+  var cc=document.getElementById('confirmCancelBtn');
+  if(cc) cc.addEventListener('click',closeConfirm);
+})();
+
+/* === Edit companies flow === */
+var _editCoTarget=null; /* {user_id, name, email, currentIds:{}} */
+
+function openCompaniesModal(userId, name, email, currentCompanies){
+  var currentIds={};
+  for(var i=0;i<currentCompanies.length;i++){currentIds[currentCompanies[i].id]=true}
+  _editCoTarget={user_id:userId, name:name, email:email, currentIds:currentIds};
+  document.getElementById('editCoTitle').textContent='Edit companies for '+name;
+  document.getElementById('editCoSub').textContent=email||'';
+  var errEl=document.getElementById('editCoErr'); errEl.classList.remove('show'); errEl.textContent='';
+  var saveBtn=document.getElementById('editCoSaveBtn'); saveBtn.disabled=false; saveBtn.textContent='Save';
+  var list=document.getElementById('editCoList');
+  list.innerHTML='<div class="es">Loading companies…</div>';
+  document.getElementById('editCoVeil').classList.add('on');
+  if(window._allCompanies && window._allCompanies.length){
+    renderEditCoChecklist(); return;
+  }
+  fetch(SB+'/rest/v1/rpc/admin_list_companies',{method:'POST',headers:H,body:'{}'})
+    .then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.message||('HTTP '+r.status));return d})})
+    .then(function(rows){
+      window._allCompanies=rows;
+      /* keep invite-modal select in sync if both modals are used in the same session */
+      var sel=document.getElementById('invCompany');
+      if(sel){
+        var opts='<option value="">Select…</option>';
+        for(var i=0;i<rows.length;i++) opts+='<option value="'+rows[i].id+'">'+hesc(rows[i].name)+'</option>';
+        sel.innerHTML=opts; _invCompaniesLoaded=true;
+      }
+      renderEditCoChecklist();
+    })
+    .catch(function(e){
+      list.innerHTML='<div class="es" style="color:var(--color-danger)">Failed: '+hesc(e.message)+'</div>';
+    });
+}
+
+function renderEditCoChecklist(){
+  var list=document.getElementById('editCoList');
+  var rows=window._allCompanies||[];
+  var html='';
+  for(var j=0;j<rows.length;j++){
+    var c=rows[j];
+    var checked=_editCoTarget.currentIds[c.id]?' checked':'';
+    html+='<label class="edit-co-row"><input type="checkbox" value="'+c.id+'"'+checked+'> <span>'+hesc(c.name)+'</span></label>';
+  }
+  list.innerHTML=html;
+}
+
+function closeCompaniesModal(){
+  document.getElementById('editCoVeil').classList.remove('on');
+  _editCoTarget=null;
+}
+
+function submitCompaniesEdit(ev){
+  ev.preventDefault();
+  if(!_editCoTarget) return;
+  var checks=document.querySelectorAll('#editCoList input[type=checkbox]');
+  var selectedIds=[];
+  for(var i=0;i<checks.length;i++){if(checks[i].checked) selectedIds.push(checks[i].value)}
+  var errEl=document.getElementById('editCoErr'); errEl.classList.remove('show'); errEl.textContent='';
+  var btn=document.getElementById('editCoSaveBtn'); btn.disabled=true; btn.textContent='Saving…';
+  var name=_editCoTarget.name;
+  fetch(SB+'/functions/v1/admin-set-user-companies',{
+    method:'POST',headers:H,
+    body:JSON.stringify({user_id:_editCoTarget.user_id, company_ids:selectedIds})
+  })
+    .then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.error||('HTTP '+r.status)+(d.detail?' — '+d.detail:''));return d})})
+    .then(function(d){
+      var added=(d.companies_added||[]).length;
+      var removed=(d.companies_removed||[]).length;
+      var msg=(added===0 && removed===0) ? ('No changes for '+name) : ('Updated '+name+': +'+added+' / -'+removed);
+      ss('st-ad',msg,'ok');
+      closeCompaniesModal();
+      loadAdminUsers(); loadAuditLog();
+    })
+    .catch(function(e){
+      errEl.textContent=e.message; errEl.classList.add('show');
+      btn.disabled=false; btn.textContent='Save';
+    });
+}
+
+(function wireEditCo(){
+  var c=document.getElementById('editCoCancelBtn');
+  var f=document.getElementById('editCoForm');
+  if(c) c.addEventListener('click',closeCompaniesModal);
+  if(f) f.addEventListener('submit',submitCompaniesEdit);
+})();
+
+/* === Activity log === */
+function renderAuditSummary(row){
+  var actor=hesc(row.actor_name||'(unknown)');
+  var d=row.details||{};
+  switch(row.action_type){
+    case 'invite':
+      return actor+' invited <b>'+hesc(d.name||'(no name)')+'</b> ('+hesc(d.email||'')+') to '+hesc(d.company_name||'(unknown company)');
+    case 'cancel_invite':
+      var su=d.snapshot_user||{};
+      var coArr=d.snapshot_companies||[];
+      var coNames=coArr.map(function(c){return hesc(c.name||'')}).join(', ');
+      return actor+' cancelled invite for <b>'+hesc(su.name||'(no name)')+'</b> ('+hesc(su.email||'')+')'+(coNames?' — '+coNames:'');
+    case 'disable':
+      return actor+' disabled <b>'+hesc(d.target_name||row.target_name||'(unknown)')+'</b>';
+    case 'enable':
+      return actor+' re-enabled <b>'+hesc(d.target_name||row.target_name||'(unknown)')+'</b>';
+    case 'reassign':
+      var name=hesc(d.target_name||row.target_name||'(unknown)');
+      if(d.is_noop) return actor+' reviewed companies for <b>'+name+'</b> <span style="color:var(--text-light)">(no change)</span>';
+      var oldNames=(d.old_companies||[]).map(function(c){return hesc(c.name||'')}).join(', ')||'<span style="color:var(--text-light)">none</span>';
+      var newNames=(d.new_companies||[]).map(function(c){return hesc(c.name||'')}).join(', ')||'<span style="color:var(--text-light)">none</span>';
+      return actor+' updated companies for <b>'+name+'</b>: '+oldNames+' → '+newNames;
+    default:
+      return actor+' '+hesc(row.action_type);
+  }
+}
+
+function auditBadgeClass(action_type){
+  /* Whitelist known classes; unknown actions get the default badge so the
+     CSS doesn't get polluted by attacker-controlled class names. */
+  var known={invite:1, cancel_invite:1, disable:1, enable:1, reassign:1};
+  return known[action_type] ? ('audit-'+action_type) : 'audit-default';
+}
+
+function loadAuditLog(){
+  var el=document.getElementById('auditLog');
+  var lbl=document.getElementById('ad-audit-count');
+  if(!el) return;
+  fetch(SB+'/rest/v1/rpc/admin_list_audit_log',{method:'POST',headers:H,body:JSON.stringify({p_limit:50})})
+    .then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.message||('HTTP '+r.status));return d})})
+    .then(function(rows){
+      rows = rows || [];
+      if(lbl) lbl.textContent = rows.length ? '('+rows.length+')' : '';
+      if(!rows.length){el.innerHTML='<div class="es" style="padding:var(--space-5)">No admin actions yet.</div>';return}
+      var s='';
+      for(var i=0;i<rows.length;i++){
+        var row=rows[i];
+        var label=(row.action_type||'').replace(/_/g,' ');
+        s+='<div class="audit-row">';
+        s+= '<div class="audit-line">';
+        s+=  '<span class="audit-badge '+auditBadgeClass(row.action_type)+'">'+hesc(label)+'</span>';
+        s+=  '<span class="audit-summary">'+renderAuditSummary(row)+'</span>';
+        s+= '</div>';
+        s+= '<div class="audit-meta">'+timeAgo(row.created_at)+' · '+new Date(row.created_at).toLocaleString()+'</div>';
+        s+='</div>';
+      }
+      el.innerHTML=s;
+    })
+    .catch(function(e){
+      el.innerHTML='<div class="es" style="padding:var(--space-5);color:var(--color-danger)">Failed to load: '+hesc(e.message)+'</div>';
+    });
+}
 
 /* ===== TASKS PAGE (5c.2.2) ===== */
 var TASK_CACHE = {};
@@ -3177,9 +3519,9 @@ function ensureTeamLoaded(){
   whenAuth(loadTeam);
 }
 function ensureAdminLoaded(){
-  if(_adminLoaded) { whenAuth(loadAdminUsers); return; }
+  if(_adminLoaded) { whenAuth(function(){loadAdminUsers();loadAuditLog()}); return; }
   _adminLoaded=true;
-  whenAuth(loadAdminUsers);
+  whenAuth(function(){loadAdminUsers();loadAuditLog()});
 }
 
 /* Hook into navigate() — augment it to trigger lazy loads per page */
