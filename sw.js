@@ -1,5 +1,5 @@
-// Jarvis SW v20 — sprint/5c-2-5a-users-invite: Admin Users + invite + OTP modal
-const CACHE = 'jarvis-v20';
+// Jarvis SW v21 — sprint/5c-2-5b-lifecycle-audit: Admin lifecycle (cancel/disable/enable) + edit-companies + Activity log
+const CACHE = 'jarvis-v21';
 
 self.addEventListener('install', function(e) {
   self.skipWaiting();
