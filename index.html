@@ -105,6 +105,29 @@ body:not(.locked) #loginGate{display:none !important}
 .lg-foot{margin-top:16px;color:#555;font-size:11px;text-align:center;line-height:1.5}
 .lg-user{display:flex;align-items:center;gap:8px;background:#0a2e1a;border:1px solid #166534;color:#4ade80;padding:8px 12px;border-radius:8px;margin-bottom:14px;font-size:12px}
 .lg-out{margin-left:auto;background:none;border:1px solid #166534;color:#4ade80;font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer}
+/* admin invite modals (Sprint 5b.2) */
+.modal-veil{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-veil.on{display:flex}
+.modal-box{background:#14120e;border:1px solid #2a1a0a;border-radius:14px;padding:24px;max-width:440px;width:100%;max-height:90vh;overflow-y:auto}
+.modal-box h2{color:#F58025;font-size:18px;letter-spacing:.5px;margin-bottom:6px}
+.modal-box .sub{color:#888;font-size:12px;margin-bottom:18px}
+.modal-row{margin-bottom:14px}
+.modal-row label{display:block;color:#aaa;font-size:11px;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px}
+.modal-row input,.modal-row select{width:100%;background:#0f0d0a;border:1px solid #2a1a0a;border-radius:8px;padding:12px;color:#e0e0e0;font-size:15px;font-family:inherit;box-sizing:border-box}
+.modal-row input:focus,.modal-row select:focus{outline:none;border-color:#F58025}
+.modal-actions{display:flex;gap:8px;margin-top:20px}
+.modal-actions .btn{flex:1}
+.btn-cancel{background:#1a1710;color:#888;border:1px solid #2a1a0a}
+.btn-cancel:active{background:#2a1a0a}
+.modal-err{background:#2e0a0a;border:1px solid #7f1d1d;color:#f87171;padding:10px;border-radius:8px;margin-bottom:14px;font-size:12px;display:none}
+.modal-err.show{display:block}
+.otp-display{background:#0f0d0a;border:2px solid #F58025;border-radius:12px;padding:18px;text-align:center;margin:14px 0}
+.otp-code{font-family:'SF Mono',Consolas,Monaco,monospace;font-size:28px;letter-spacing:6px;color:#F58025;font-weight:700}
+.otp-meta{font-size:11px;color:#666;margin-top:6px}
+.otp-hint{background:#0d2a14;border:1px solid #166534;color:#4ade80;padding:10px;border-radius:8px;font-size:12px;margin:10px 0;line-height:1.5}
+.copy-flash{background:#0d2a14 !important;color:#4ade80 !important;border-color:#166534 !important}
+.invite-trigger{background:#14120e;border:1px solid #F58025;color:#F58025;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:12px;-webkit-tap-highlight-color:transparent}
+.invite-trigger:active{transform:scale(.98);background:#2e1a0a}
 </style>
 </head>
 <body class="locked">
@@ -228,7 +251,43 @@ body:not(.locked) #loginGate{display:none !important}
 <div class="hdr"><h1>ADMIN</h1><div class="sub">User management. Owner-only.</div></div>
 <div id="st6" class="st"></div>
 <div class="section-label" style="margin-top:8px">Users</div>
+<button class="invite-trigger" id="inviteBtn">+ Invite user</button>
 <div id="adminUsers"><div class="es">Loading...</div></div>
+</div>
+
+<!-- INVITE USER MODAL (Sprint 5b.2) -->
+<div class="modal-veil" id="inviteVeil">
+  <div class="modal-box">
+    <h2>Invite a teammate</h2>
+    <div class="sub">Creates the account, mints an 8-digit code. Send the code to them via Slack DM.</div>
+    <div class="modal-err" id="inviteErr"></div>
+    <form id="inviteForm">
+      <div class="modal-row"><label>Email</label><input type="email" id="invEmail" autocomplete="email" required placeholder="ime@firma.hr"></div>
+      <div class="modal-row"><label>Name</label><input type="text" id="invName" required placeholder="Ime Prezime"></div>
+      <div class="modal-row"><label>Primary company</label><select id="invCompany" required><option value="">Loading…</option></select></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-cancel" id="invCancelBtn">Cancel</button>
+        <button type="submit" class="btn" id="invSubmitBtn">Send invite</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- OTP RESULT MODAL (Sprint 5b.2) -->
+<div class="modal-veil" id="otpVeil">
+  <div class="modal-box">
+    <h2>Invite created</h2>
+    <div class="sub" id="otpSub">—</div>
+    <div class="otp-display">
+      <div class="otp-code" id="otpCode">——————</div>
+      <div class="otp-meta">8-digit code</div>
+    </div>
+    <button type="button" class="btn" id="otpCopyBtn">Copy code</button>
+    <div class="otp-hint">Send this code via Slack DM. Do not paste it in a public channel — preview bots can consume one-time codes.</div>
+    <div class="modal-actions" style="margin-top:10px">
+      <button type="button" class="btn btn-cancel" id="otpDoneBtn">Done</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -1116,6 +1175,81 @@ function renderLearnings(learns,weekAgo){
 }
 
 /* --- ADMIN (Sprint 5b.1: owner-only user list) --- */
+/* ===== Invite-user flow (Sprint 5b.2) ===== */
+var _invCompaniesLoaded=false;
+function openInviteModal(){
+  document.getElementById('invEmail').value='';
+  document.getElementById('invName').value='';
+  document.getElementById('inviteErr').classList.remove('show');
+  document.getElementById('inviteErr').textContent='';
+  document.getElementById('invSubmitBtn').disabled=false;
+  document.getElementById('invSubmitBtn').textContent='Send invite';
+  document.getElementById('inviteVeil').classList.add('on');
+  if(!_invCompaniesLoaded) loadCompaniesIntoSelect();
+}
+function closeInviteModal(){document.getElementById('inviteVeil').classList.remove('on')}
+function loadCompaniesIntoSelect(){
+  var sel=document.getElementById('invCompany');
+  sel.innerHTML='<option value="">Loading…</option>';
+  fetch(SB+'/rest/v1/rpc/admin_list_companies',{method:'POST',headers:H,body:'{}'})
+    .then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.message||('HTTP '+r.status));return d})})
+    .then(function(rows){
+      var opts='<option value="">Select…</option>';
+      for(var i=0;i<rows.length;i++) opts+='<option value="'+rows[i].id+'">'+hesc(rows[i].name)+'</option>';
+      sel.innerHTML=opts;
+      _invCompaniesLoaded=true;
+    })
+    .catch(function(e){sel.innerHTML='<option value="">Failed: '+hesc(e.message)+'</option>'});
+}
+function submitInvite(ev){
+  ev.preventDefault();
+  var email=document.getElementById('invEmail').value.trim().toLowerCase();
+  var name=document.getElementById('invName').value.trim();
+  var companyId=document.getElementById('invCompany').value;
+  var errEl=document.getElementById('inviteErr');
+  errEl.classList.remove('show');errEl.textContent='';
+  if(!email||email.indexOf('@')<0||!name||!companyId){
+    errEl.textContent='Email, name, and company are all required.';errEl.classList.add('show');return;
+  }
+  var btn=document.getElementById('invSubmitBtn');
+  btn.disabled=true;btn.textContent='Sending…';
+  fetch(SB+'/functions/v1/admin-create-user',{
+    method:'POST',headers:H,
+    body:JSON.stringify({email:email,name:name,company_id:companyId})
+  })
+    .then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.error||('HTTP '+r.status)+(d.detail?' — '+d.detail:''));return d})})
+    .then(function(d){
+      closeInviteModal();
+      showOtpResult(d);
+      loadAdmin();
+    })
+    .catch(function(e){
+      errEl.textContent=e.message;errEl.classList.add('show');
+      btn.disabled=false;btn.textContent='Send invite';
+    });
+}
+function showOtpResult(d){
+  document.getElementById('otpSub').textContent=d.name+' · '+d.email+(d.company_name?' · '+d.company_name:'');
+  document.getElementById('otpCode').textContent=d.email_otp||'—';
+  var copyBtn=document.getElementById('otpCopyBtn');
+  copyBtn.classList.remove('copy-flash');copyBtn.textContent='Copy code';
+  copyBtn.onclick=function(){
+    if(d.email_otp){
+      if(navigator.clipboard&&navigator.clipboard.writeText){
+        navigator.clipboard.writeText(d.email_otp).then(function(){
+          copyBtn.classList.add('copy-flash');copyBtn.textContent='Copied!';
+        }).catch(function(){copyBtn.textContent='Copy failed — select manually'});
+      }else{copyBtn.textContent='Clipboard unavailable — select code manually'}
+    }
+  };
+  document.getElementById('otpVeil').classList.add('on');
+}
+document.getElementById('inviteBtn').addEventListener('click',openInviteModal);
+document.getElementById('invCancelBtn').addEventListener('click',closeInviteModal);
+document.getElementById('inviteForm').addEventListener('submit',submitInvite);
+document.getElementById('otpDoneBtn').addEventListener('click',function(){document.getElementById('otpVeil').classList.remove('on')});
+/* ===== end invite-user flow ===== */
+
 function loadAdmin(){
   var el=document.getElementById('adminUsers');
   el.innerHTML='<div class="es">Loading...</div>';
