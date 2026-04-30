@@ -1174,6 +1174,78 @@ body.drawer-open .fab { opacity: 0; pointer-events: none; }
   .team-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--space-5); align-items: start; }
 }
 
+/* === ADMIN (5c.2.5a) — Users + invite + OTP === */
+.admin-section-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); margin-top: var(--space-5); margin-bottom: var(--space-3); flex-wrap: wrap; }
+.admin-section-head .section-label { margin: 0; }
+.admin-invite-btn {
+  background: var(--color-orange); color: var(--text-inverse);
+  border: 1px solid var(--color-orange);
+  padding: 8px var(--space-4); border-radius: var(--radius-md);
+  font-size: 13px; font-weight: 600; font-family: inherit;
+  cursor: pointer; transition: background var(--motion-fast);
+}
+.admin-invite-btn:hover { background: var(--color-orange-hover); border-color: var(--color-orange-hover); }
+.admin-invite-btn:active { background: var(--color-orange-active); }
+
+.user-card { position: relative; }
+.user-card.disabled { border-left: 3px solid var(--color-danger); }
+.user-card.active   { border-left: 3px solid var(--color-success); }
+.user-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); flex-wrap: wrap; margin-bottom: 6px; }
+.user-card-name { font-size: 15px; font-weight: 600; color: var(--text-primary); line-height: 1.3; display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.user-card-email { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+.user-card-companies { font-size: 11px; color: var(--text-light); line-height: 1.5; margin-top: 4px; }
+.user-card-companies .lbl { color: var(--text-light); }
+.user-card-companies .none { color: var(--text-disabled); font-style: italic; }
+.user-card-meta { font-size: 11px; color: var(--text-light); margin-top: 4px; }
+
+.user-badge {
+  font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
+  padding: 2px 8px; border-radius: var(--radius-full); white-space: nowrap;
+}
+.user-badge.active   { background: var(--color-success-bg); color: var(--color-success); }
+.user-badge.disabled { background: var(--color-danger-bg);  color: var(--color-danger); }
+.user-badge.owner    { background: var(--color-orange-tint); color: var(--color-orange); }
+
+/* OTP modal — one-time-secret display */
+.otp-display {
+  background: var(--surface-muted);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  text-align: center;
+  margin-bottom: var(--space-3);
+}
+.otp-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 28px; font-weight: 700;
+  letter-spacing: 6px;
+  color: var(--text-primary);
+  user-select: all;
+}
+.otp-meta { font-size: 11px; color: var(--text-light); margin-top: 6px; letter-spacing: 1px; text-transform: uppercase; }
+.otp-copy-btn {
+  width: 100%; height: 40px;
+  background: var(--surface-card); border: 1px solid var(--border-default);
+  color: var(--text-primary); font-family: inherit; font-size: 13px; font-weight: 500;
+  border-radius: var(--radius-md); cursor: pointer; transition: all var(--motion-fast);
+}
+.otp-copy-btn:hover { background: var(--surface-hover); border-color: var(--color-orange); }
+.otp-copy-btn.flash { background: var(--color-success-bg); border-color: var(--color-success-border); color: var(--color-success); }
+.otp-hint {
+  font-size: 11px; color: var(--text-muted); line-height: 1.5;
+  margin-top: var(--space-3); padding: var(--space-3);
+  background: var(--color-warning-bg); border: 1px solid var(--color-warning-border);
+  border-radius: var(--radius-md);
+}
+.modal-err {
+  background: var(--color-danger-bg);
+  border: 1px solid var(--color-danger-border);
+  color: var(--color-danger);
+  padding: var(--space-3); border-radius: var(--radius-md);
+  font-size: 13px; margin-bottom: var(--space-3); display: none;
+}
+.modal-err.show { display: block; }
+
 .ap-btn {
   flex: 1; min-width: 80px;
   background: var(--surface-card);
@@ -1568,13 +1640,16 @@ body.drawer-open .fab { opacity: 0; pointer-events: none; }
 
   <!-- ADMIN (owner-only) -->
   <div class="page" id="page-admin">
-    <div class="page-header"><h1>Admin</h1><div class="sub">User management — coming next.</div></div>
-    <div class="placeholder">
-      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15v2M19 5h-3V3a1 1 0 00-1-1H9a1 1 0 00-1 1v2H5a1 1 0 00-1 1v14a1 1 0 001 1h14a1 1 0 001-1V6a1 1 0 00-1-1z"/></svg>
-      <h2>Admin lands in 5c.2.3</h2>
-      <p>Sprint 5b features ported intact: invite, lifecycle (cancel / disable / enable), edit companies, audit log.</p>
-      <span class="sprint-tag">Sprint 5c.2.3</span>
+    <div class="page-header"><h1>Admin</h1><div class="sub" id="ad-sub">User management. Owner-only.</div></div>
+    <div id="st-ad" class="st"></div>
+
+    <div class="admin-section-head">
+      <div class="section-label">Users <span class="team-count" id="ad-users-count"></span></div>
+      <button type="button" class="admin-invite-btn" id="inviteBtn">+ Invite user</button>
     </div>
+    <div id="adminUsers" class="cards-stack"><div class="es" style="padding:var(--space-5)">Loading…</div></div>
+
+    <!-- Activity log + lifecycle actions ship in Sprint 5c.2.5b -->
   </div>
 
   <!-- ACCOUNT (Settings) -->
@@ -1640,6 +1715,50 @@ body.drawer-open .fab { opacity: 0; pointer-events: none; }
     <div class="modal-actions">
       <button type="button" class="btn-modal cancel" id="taskModalCancel">Cancel</button>
       <button type="button" class="btn-modal primary" id="taskModalSave">Add task</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ INVITE USER MODAL (5c.2.5a) ============ -->
+<div class="modal-veil" id="inviteVeil" aria-hidden="true">
+  <div class="modal-box" role="dialog" aria-labelledby="inviteTitle">
+    <h2 id="inviteTitle">Invite a teammate</h2>
+    <div class="sub">Creates the account, mints an 8-digit code. Send the code to them via Slack DM.</div>
+    <div class="modal-err" id="inviteErr"></div>
+    <form id="inviteForm">
+      <div class="modal-row">
+        <label for="invEmail">Email</label>
+        <input type="text" id="invEmail" autocomplete="email" placeholder="ime@firma.hr">
+      </div>
+      <div class="modal-row">
+        <label for="invName">Name</label>
+        <input type="text" id="invName" placeholder="Ime Prezime">
+      </div>
+      <div class="modal-row">
+        <label for="invCompany">Primary company</label>
+        <select id="invCompany"><option value="">Loading…</option></select>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-modal cancel" id="invCancelBtn">Cancel</button>
+        <button type="submit" class="btn-modal primary" id="invSubmitBtn">Send invite</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============ OTP RESULT MODAL (5c.2.5a) — one-time secret ============ -->
+<div class="modal-veil" id="otpVeil" aria-hidden="true">
+  <div class="modal-box" role="dialog" aria-labelledby="otpTitle">
+    <h2 id="otpTitle">Invite created</h2>
+    <div class="sub" id="otpSub">—</div>
+    <div class="otp-display">
+      <div class="otp-code" id="otpCode">——————</div>
+      <div class="otp-meta">8-digit code</div>
+    </div>
+    <button type="button" class="otp-copy-btn" id="otpCopyBtn">Copy code</button>
+    <div class="otp-hint">Send this code via Slack DM. Do not paste it in a public channel — preview bots can consume one-time codes. The code is shown once and never logged.</div>
+    <div class="modal-actions" style="margin-top:var(--space-3)">
+      <button type="button" class="btn-modal cancel" id="otpDoneBtn">Done</button>
     </div>
   </div>
 </div>
@@ -2584,6 +2703,134 @@ function paintTeamLearnings(rows){
   el.innerHTML=html;
 }
 
+/* ===== ADMIN PAGE (5c.2.5a) — Users + invite + OTP =====
+   Lifecycle actions, edit-companies, and audit log ship in 5c.2.5b. */
+var _invCompaniesLoaded=false;
+
+function loadAdminUsers(){
+  var el=document.getElementById('adminUsers');
+  var lbl=document.getElementById('ad-users-count');
+  if(!el) return;
+  el.innerHTML='<div class="es" style="padding:var(--space-5)">Loading…</div>';
+  fetch(SB+'/rest/v1/rpc/admin_list_users',{method:'POST',headers:H,body:'{}'})
+    .then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.message||('HTTP '+r.status));return d})})
+    .then(function(rows){
+      rows = rows || [];
+      if(lbl) lbl.textContent = rows.length ? '('+rows.length+')' : '';
+      if(!rows.length){el.innerHTML='<div class="es" style="padding:var(--space-5)">No users yet.</div>';return}
+      var html=rows.map(function(u){
+        var disabled = u.banned_until && new Date(u.banned_until).getTime() > Date.now();
+        var statusBadge = disabled
+          ? '<span class="user-badge disabled">Disabled</span>'
+          : '<span class="user-badge active">Active</span>';
+        var ownerBadge = u.is_owner ? '<span class="user-badge owner">Owner</span>' : '';
+        var companies = (u.companies||[]).map(function(c){return hesc(c.name||'')}).filter(Boolean).join(', ');
+        var companiesHtml = companies
+          ? '<span class="lbl">Companies:</span> '+companies
+          : '<span class="lbl">Companies:</span> <span class="none">none</span>';
+        var lastActive = u.last_active_at ? timeAgo(u.last_active_at) : 'never';
+        var roleSuffix = u.role ? ' · role: '+hesc(u.role) : '';
+        var stateClass = disabled ? 'disabled' : 'active';
+        return '<div class="card-item user-card '+stateClass+'">'+
+          '<div class="user-card-head">'+
+            '<div class="user-card-name">'+hesc(u.name||'(no name)')+ownerBadge+'</div>'+
+            statusBadge+
+          '</div>'+
+          '<div class="user-card-email">'+hesc(u.login_email||u.email||'')+'</div>'+
+          '<div class="user-card-companies">'+companiesHtml+'</div>'+
+          '<div class="user-card-meta">Last active: '+lastActive+roleSuffix+'</div>'+
+        '</div>';
+      }).join('');
+      el.innerHTML=html;
+    })
+    .catch(function(e){
+      el.innerHTML='<div class="es" style="padding:var(--space-5);color:var(--color-danger)">Failed to load: '+hesc(e.message)+'</div>';
+    });
+}
+
+function openInviteModal(){
+  document.getElementById('invEmail').value='';
+  document.getElementById('invName').value='';
+  var err=document.getElementById('inviteErr'); err.classList.remove('show'); err.textContent='';
+  var btn=document.getElementById('invSubmitBtn'); btn.disabled=false; btn.textContent='Send invite';
+  document.getElementById('inviteVeil').classList.add('on');
+  if(!_invCompaniesLoaded) loadCompaniesIntoSelect();
+}
+function closeInviteModal(){document.getElementById('inviteVeil').classList.remove('on')}
+
+function loadCompaniesIntoSelect(){
+  var sel=document.getElementById('invCompany');
+  sel.innerHTML='<option value="">Loading…</option>';
+  fetch(SB+'/rest/v1/rpc/admin_list_companies',{method:'POST',headers:H,body:'{}'})
+    .then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.message||('HTTP '+r.status));return d})})
+    .then(function(rows){
+      window._allCompanies=rows; /* shared cache for future edit-companies modal in 5b */
+      var opts='<option value="">Select…</option>';
+      for(var i=0;i<rows.length;i++) opts+='<option value="'+rows[i].id+'">'+hesc(rows[i].name)+'</option>';
+      sel.innerHTML=opts;
+      _invCompaniesLoaded=true;
+    })
+    .catch(function(e){sel.innerHTML='<option value="">Failed: '+hesc(e.message)+'</option>'});
+}
+
+function submitInvite(ev){
+  ev.preventDefault();
+  var email=(document.getElementById('invEmail').value||'').trim().toLowerCase();
+  var name=(document.getElementById('invName').value||'').trim();
+  var companyId=document.getElementById('invCompany').value;
+  var errEl=document.getElementById('inviteErr');
+  errEl.classList.remove('show'); errEl.textContent='';
+  if(!email||email.indexOf('@')<0||!name||!companyId){
+    errEl.textContent='Email, name, and company are all required.'; errEl.classList.add('show'); return;
+  }
+  var btn=document.getElementById('invSubmitBtn');
+  btn.disabled=true; btn.textContent='Sending…';
+  fetch(SB+'/functions/v1/admin-create-user',{
+    method:'POST',headers:H,
+    body:JSON.stringify({email:email,name:name,company_id:companyId})
+  })
+    .then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.error||('HTTP '+r.status)+(d.detail?' — '+d.detail:''));return d})})
+    .then(function(d){
+      closeInviteModal();
+      showOtpResult(d);
+      loadAdminUsers();
+    })
+    .catch(function(e){
+      errEl.textContent=e.message; errEl.classList.add('show');
+      btn.disabled=false; btn.textContent='Send invite';
+    });
+}
+
+function showOtpResult(d){
+  var sub=(d.name||'')+' · '+(d.email||'')+(d.company_name?' · '+d.company_name:'');
+  document.getElementById('otpSub').textContent=sub;
+  document.getElementById('otpCode').textContent=d.email_otp||'—';
+  var copyBtn=document.getElementById('otpCopyBtn');
+  copyBtn.classList.remove('flash'); copyBtn.textContent='Copy code';
+  copyBtn.onclick=function(){
+    if(d.email_otp && navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(d.email_otp).then(function(){
+        copyBtn.classList.add('flash'); copyBtn.textContent='Copied';
+      }).catch(function(){ copyBtn.textContent='Copy failed — select manually'; });
+    } else {
+      copyBtn.textContent='Clipboard unavailable — select code manually';
+    }
+  };
+  document.getElementById('otpVeil').classList.add('on');
+}
+
+/* Wire admin event handlers — guarded so they only attach when admin page exists */
+(function wireAdmin(){
+  var inviteBtn=document.getElementById('inviteBtn');
+  var inviteForm=document.getElementById('inviteForm');
+  var invCancel=document.getElementById('invCancelBtn');
+  var otpDone=document.getElementById('otpDoneBtn');
+  if(inviteBtn) inviteBtn.addEventListener('click',openInviteModal);
+  if(invCancel) invCancel.addEventListener('click',closeInviteModal);
+  if(inviteForm) inviteForm.addEventListener('submit',submitInvite);
+  if(otpDone) otpDone.addEventListener('click',function(){document.getElementById('otpVeil').classList.remove('on')});
+})();
+
 /* ===== TASKS PAGE (5c.2.2) ===== */
 var TASK_CACHE = {};
 var taskFilter = 'active'; /* active | completed */
@@ -2912,8 +3159,8 @@ function ensureTasksLoaded(){
   whenAuth(function(){loadTasks();loadLPProjects()});
 }
 
-/* Approvals + Content + Team lazy-load (5c.2.3, 5c.2.4) */
-var _approvalsLoaded=false, _contentLoaded=false, _teamLoaded=false;
+/* Approvals + Content + Team + Admin lazy-load (5c.2.3, 5c.2.4, 5c.2.5a) */
+var _approvalsLoaded=false, _contentLoaded=false, _teamLoaded=false, _adminLoaded=false;
 function ensureApprovalsLoaded(){
   if(_approvalsLoaded) { whenAuth(loadApprovals); return; }
   _approvalsLoaded=true;
@@ -2929,6 +3176,11 @@ function ensureTeamLoaded(){
   _teamLoaded=true;
   whenAuth(loadTeam);
 }
+function ensureAdminLoaded(){
+  if(_adminLoaded) { whenAuth(loadAdminUsers); return; }
+  _adminLoaded=true;
+  whenAuth(loadAdminUsers);
+}
 
 /* Hook into navigate() — augment it to trigger lazy loads per page */
 var _origNavigate = navigate;
@@ -2938,12 +3190,13 @@ navigate = function(pageId){
   if(pageId==='approvals') ensureApprovalsLoaded();
   if(pageId==='content')   ensureContentLoaded();
   if(pageId==='team')      ensureTeamLoaded();
+  if(pageId==='admin')     ensureAdminLoaded();
 };
 
 /* if URL hash points to a lazy page on first load, trigger its load */
 whenAuth(function(){
   var h=(window.location.hash||'').replace(/^#/,'');
-  if(h==='tasks'||h==='approvals'||h==='content'||h==='team') navigate(h);
+  if(h==='tasks'||h==='approvals'||h==='content'||h==='team'||h==='admin') navigate(h);
 });
 
 /* ===== SERVICE WORKER ===== */
