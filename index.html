@@ -1105,6 +1105,170 @@ body.drawer-open .fab { opacity: 0; pointer-events: none; }
   color: var(--color-orange);
   border: 1px solid var(--color-orange-border);
 }
+
+/* === APPROVALS + CONTENT (5c.2.3) === */
+.cards-stack { display: flex; flex-direction: column; gap: var(--space-3); }
+.card-item {
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5);
+  box-shadow: var(--shadow-card);
+}
+.card-item.resolved { opacity: 0.65; }
+.section-label {
+  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.2px;
+  color: var(--text-muted); margin: var(--space-5) 0 var(--space-3) var(--space-2);
+}
+.section-label:first-child { margin-top: 0; }
+.card-title { font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; line-height: 1.4; }
+.card-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.55; white-space: pre-line; margin-bottom: var(--space-3); }
+.card-meta { display: flex; align-items: center; gap: var(--space-3); font-size: 12px; color: var(--text-muted); flex-wrap: wrap; margin-bottom: var(--space-3); }
+.card-meta .pill { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: var(--radius-full); font-size: 11px; font-weight: 500; }
+.card-meta .pill.pending { background: var(--color-orange-tint); color: var(--color-orange); }
+.card-meta .pill.priority-low { color: var(--text-muted); }
+.card-meta .pill.priority-normal { color: var(--text-muted); }
+.card-meta .pill.priority-high { background: var(--color-warning-bg); color: var(--color-warning); }
+.card-meta .pill.priority-urgent { background: var(--color-danger-bg); color: var(--color-danger); }
+.card-meta .ago { color: var(--text-light); }
+.card-meta .response-tag { font-weight: 500; }
+.card-meta .response-tag.ok { color: var(--color-success); }
+.card-meta .response-tag.bad { color: var(--color-danger); }
+.card-meta .response-tag.warn { color: var(--color-warning); }
+.ap-note {
+  width: 100%;
+  background: var(--surface-input);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-family: inherit; font-size: 13px;
+  padding: 10px;
+  margin-bottom: var(--space-3);
+  resize: vertical;
+}
+.ap-actions, .post-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.ap-btn {
+  flex: 1; min-width: 80px;
+  background: var(--surface-card);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  font-size: 13px; font-weight: 500; font-family: inherit;
+  cursor: pointer;
+  transition: all var(--motion-fast);
+}
+.ap-btn:hover { background: var(--surface-hover); }
+.ap-btn.approve { border-color: var(--color-success); color: var(--color-success); }
+.ap-btn.reject  { border-color: var(--color-danger);  color: var(--color-danger); }
+.ap-btn.warn    { border-color: var(--color-warning); color: var(--color-warning); }
+.ap-resolved-note { font-size: 11px; color: var(--text-light); font-style: italic; margin-top: 4px; }
+
+/* CONTENT (LinkedIn pipeline) */
+.post-title-row { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-3); margin-bottom: var(--space-2); }
+.post-preview { font-size: 13px; color: var(--text-secondary); line-height: 1.55; margin-bottom: var(--space-2); }
+.post-preview .edited-flag { color: var(--color-info); font-size: 10px; margin-left: 4px; font-weight: 500; }
+.post-full {
+  display: none;
+  background: var(--surface-muted);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  font-size: 13px; line-height: 1.65; color: var(--text-primary);
+  white-space: pre-line; margin: var(--space-3) 0;
+}
+.post-full .original-block { margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px dashed var(--border-default); font-size: 11px; color: var(--text-muted); }
+.post-full .original-label { color: var(--color-info); margin-bottom: 4px; font-weight: 600; letter-spacing: 0.5px; }
+.post-editor {
+  display: none;
+  background: var(--surface-muted);
+  border: 1px solid var(--color-info-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  margin: var(--space-3) 0;
+}
+.post-editor textarea, .post-editor input {
+  width: 100%;
+  background: var(--surface-card);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+  font-family: inherit; font-size: 13px;
+  border-radius: var(--radius-md);
+  padding: 10px;
+  resize: vertical;
+}
+.post-editor textarea { min-height: 180px; }
+.post-editor label { display: block; font-size: 10px; font-weight: 600; color: var(--color-info); letter-spacing: 1px; margin: var(--space-2) 0 4px; text-transform: uppercase; }
+.post-tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: var(--space-2) 0 var(--space-3); }
+.post-tag { font-size: 10px; padding: 2px 8px; border-radius: var(--radius-full); border: 1px solid; font-weight: 500; }
+.post-tag.cat-ai_operations  { color: var(--color-orange); border-color: var(--color-orange-border); background: var(--color-orange-tint); }
+.post-tag.cat-founder_reality { color: var(--color-info);   border-color: var(--color-info-border);   background: var(--color-info-bg); }
+.post-tag.cat-series         { color: var(--color-success); border-color: var(--color-success-border); background: var(--color-success-bg); }
+.post-tag.cat-sequel         { color: var(--text-muted);    border-color: var(--border-default); }
+.post-tag.framework          { color: var(--color-orange); border-color: var(--color-orange-border); background: var(--color-orange-tint); }
+.post-tag.scheduled-date     { color: var(--color-warning); border-color: var(--color-warning-border); background: var(--color-warning-bg); }
+.post-tag.date               { color: var(--text-light); border-color: transparent; padding: 2px 4px; }
+.post-stats { display: flex; gap: var(--space-3); margin: var(--space-2) 0; font-size: 12px; flex-wrap: wrap; }
+.post-stats .stat-imp { color: var(--color-orange); font-weight: 500; }
+.post-stats .stat-rea { color: var(--color-success); font-weight: 500; }
+.post-stats .stat-com { color: var(--color-warning); font-weight: 500; }
+.post-stats .stat-rep { color: var(--color-info); font-weight: 500; }
+.stats-editor {
+  display: none;
+  background: var(--surface-muted);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  margin-top: var(--space-2);
+}
+.stats-editor .stats-label { font-size: 10px; color: var(--color-orange); margin-bottom: var(--space-2); letter-spacing: 1px; text-transform: uppercase; font-weight: 600; }
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+.stats-grid > div label { display: block; font-size: 10px; color: var(--text-muted); margin-bottom: 4px; }
+.stats-grid input {
+  width: 100%;
+  background: var(--surface-card);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+  font-family: inherit; font-size: 13px;
+  border-radius: var(--radius-md);
+  padding: 8px;
+}
+.post-btn {
+  background: var(--surface-card);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+  padding: 7px 14px;
+  border-radius: var(--radius-md);
+  font-size: 12px; font-weight: 500; font-family: inherit;
+  cursor: pointer;
+  transition: all var(--motion-fast);
+}
+.post-btn:hover { background: var(--surface-hover); }
+.post-btn.primary { border-color: var(--color-orange); color: var(--color-orange); }
+.post-btn.info    { border-color: var(--color-info);   color: var(--color-info); }
+.post-btn.success { border-color: var(--color-success);color: var(--color-success); }
+.post-btn.danger  { border-color: var(--color-danger); color: var(--color-danger); }
+.post-btn.warn    { border-color: var(--color-warning);color: var(--color-warning); }
+.post-btn.dim     { color: var(--text-muted); padding: 7px 10px; }
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: 1px solid;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.status-pill.status-idea      { color: var(--text-muted);    border-color: var(--border-default); }
+.status-pill.status-draft     { color: var(--color-orange);  border-color: var(--color-orange-border);  background: var(--color-orange-tint); }
+.status-pill.status-approved  { color: var(--color-success); border-color: var(--color-success-border); background: var(--color-success-bg); }
+.status-pill.status-scheduled { color: var(--color-warning); border-color: var(--color-warning-border); background: var(--color-warning-bg); }
+.status-pill.status-published { color: var(--color-info);    border-color: var(--color-info-border);    background: var(--color-info-bg); }
+
 </style>
 </head>
 <body class="locked">
@@ -1329,24 +1493,30 @@ body.drawer-open .fab { opacity: 0; pointer-events: none; }
 
   <!-- APPROVALS -->
   <div class="page" id="page-approvals">
-    <div class="page-header"><h1>Approvals</h1><div class="sub">Decisions waiting on you — coming next.</div></div>
-    <div class="placeholder">
-      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"/></svg>
-      <h2>Approvals lands in 5c.2.2</h2>
-      <p>Card list with approve / reject buttons, response notes, status pills.</p>
-      <span class="sprint-tag">Sprint 5c.2.2</span>
-    </div>
+    <div class="page-header"><h1>Approvals</h1><div class="sub" id="ap-count">Decisions waiting on you</div></div>
+    <div id="st-ap" class="st"></div>
+    <div id="apList"><div class="es" style="padding:var(--space-7)">Loading…</div></div>
   </div>
 
   <!-- CONTENT -->
   <div class="page" id="page-content">
-    <div class="page-header"><h1>Content</h1><div class="sub">LinkedIn pipeline — coming next.</div></div>
-    <div class="placeholder">
-      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v4H4zM4 11h10v9H4zM18 11h2v9h-2z"/></svg>
-      <h2>Content lands in 5c.2.2</h2>
-      <p>LinkedIn posts pipeline: idea → draft → ready → published, with metrics tracking.</p>
-      <span class="sprint-tag">Sprint 5c.2.2</span>
+    <div class="page-header"><h1>Content</h1><div class="sub" id="content-count">LinkedIn posts pipeline</div></div>
+    <div id="st-co" class="st"></div>
+    <div class="chip-row" id="cfilt" role="radiogroup" aria-label="Status">
+      <button type="button" class="chip active" data-v="all">All</button>
+      <button type="button" class="chip" data-v="idea">Ideas</button>
+      <button type="button" class="chip" data-v="draft">Drafts</button>
+      <button type="button" class="chip" data-v="approved">Ready</button>
+      <button type="button" class="chip" data-v="published">Published</button>
     </div>
+    <div class="chip-row" id="ccatfilt" role="radiogroup" aria-label="Category" style="margin-top:var(--space-2)">
+      <button type="button" class="chip active" data-v="all">All Topics</button>
+      <button type="button" class="chip" data-v="ai_operations">AI/Ops</button>
+      <button type="button" class="chip" data-v="founder_reality">Founder</button>
+      <button type="button" class="chip" data-v="series">Series</button>
+      <button type="button" class="chip" data-v="sequel">Sequel</button>
+    </div>
+    <div id="contentList" style="margin-top:var(--space-4)"><div class="es" style="padding:var(--space-7)">Loading…</div></div>
   </div>
 
   <!-- TEAM -->
@@ -1867,17 +2037,379 @@ function rejectMenu(){
     .catch(function(e){alert('Error: '+e.message)});
 }
 
-/* ===== APPROVALS BADGE (shown in nav until 5c.2.2 wires the page) ===== */
+/* ===== APPROVALS BADGE (initial load — full loader fires when tab opened) ===== */
 function loadApprovalsCount(){
   fetch(SB+'/rest/v1/approvals?select=id&status=eq.pending',{headers:H})
     .then(function(r){return r.json()})
     .then(function(data){
-      if(!data||!data.length)return;
-      var n=data.length;
-      var b1=document.getElementById('ap-badge-pop');if(b1){b1.textContent=n;b1.style.display=''}
-      var b2=document.getElementById('ap-badge-drawer');if(b2){b2.textContent=n;b2.style.display=''}
+      var n=(data&&data.length)||0;
+      var b1=document.getElementById('ap-badge-pop');
+      var b2=document.getElementById('ap-badge-drawer');
+      if(n){
+        if(b1){b1.textContent=n;b1.style.display=''}
+        if(b2){b2.textContent=n;b2.style.display=''}
+      } else {
+        if(b1)b1.style.display='none';
+        if(b2)b2.style.display='none';
+      }
     }).catch(function(){});
 }
+
+/* ===== APPROVALS PAGE (5c.2.3) ===== */
+var hesc = escHtml;
+function timeAgo(iso){
+  if(!iso) return '';
+  var d=(Date.now()-new Date(iso).getTime())/1000;
+  if(d<60) return 'just now';
+  if(d<3600) return Math.floor(d/60)+'m ago';
+  if(d<86400) return Math.floor(d/3600)+'h ago';
+  return Math.floor(d/86400)+'d ago';
+}
+
+function loadApprovals(){
+  /* Skip re-render if user is typing in any approval note */
+  var active=document.activeElement;
+  if(active && active.id && active.id.indexOf('ap-note-')===0) return;
+  fetch(SB+'/rest/v1/approvals?select=*&order=created_at.desc&limit=40',{headers:H})
+    .then(function(r){return r.json()})
+    .then(function(data){
+      var pending=data.filter(function(a){return a.status==='pending'});
+      var resolved=data.filter(function(a){return a.status!=='pending'}).slice(0,15);
+      document.getElementById('ap-count').textContent=pending.length+' pending';
+      /* keep nav badges in sync */
+      var n=pending.length;
+      var b1=document.getElementById('ap-badge-pop');
+      var b2=document.getElementById('ap-badge-drawer');
+      if(n){
+        if(b1){b1.textContent=n;b1.style.display=''}
+        if(b2){b2.textContent=n;b2.style.display=''}
+      } else {
+        if(b1)b1.style.display='none';
+        if(b2)b2.style.display='none';
+      }
+      var el=document.getElementById('apList');
+      if(!data.length){
+        el.innerHTML='<div class="es" style="padding:var(--space-7)">No approvals yet. Jarvis will create outcome-check approvals for old decisions.</div>';
+        return;
+      }
+      var s='';
+      if(pending.length){
+        s+='<div class="section-label">Pending ('+pending.length+')</div><div class="cards-stack">'+pending.map(apCard).join('')+'</div>';
+      }
+      if(resolved.length){
+        s+='<div class="section-label">Resolved</div><div class="cards-stack">'+resolved.map(apCardDone).join('')+'</div>';
+      }
+      el.innerHTML=s;
+      /* Restore drafts */
+      pending.forEach(function(a){
+        var draft=localStorage.getItem('ap-draft-'+a.id);
+        if(draft){var inp=document.getElementById('ap-note-'+a.id);if(inp)inp.value=draft}
+      });
+    })
+    .catch(function(e){
+      document.getElementById('apList').innerHTML='<div class="es" style="padding:var(--space-5);color:var(--color-danger)">Failed to load: '+hesc(e.message)+'</div>';
+    });
+}
+
+function apCard(a){
+  var opts=Array.isArray(a.options)&&a.options.length
+    ? a.options.map(function(o){return typeof o==='string'?{label:o,value:o}:o})
+    : [{label:'Approve',value:'approved'},{label:'Reject',value:'rejected'}];
+  var html='<div class="card-item">'+
+    '<div class="card-title">'+hesc(a.title||'')+'</div>'+
+    (a.description?'<div class="card-desc">'+hesc(a.description)+'</div>':'')+
+    '<div class="card-meta">'+
+      '<span class="pill pending">pending</span>'+
+      '<span class="pill priority-'+(a.priority||'normal')+'">'+(a.priority||'normal')+'</span>'+
+      '<span class="ago">'+timeAgo(a.created_at)+'</span>'+
+    '</div>'+
+    '<textarea class="ap-note" id="ap-note-'+a.id+'" rows="2" '+
+      'placeholder="Optional note (Enter to approve, Shift+Enter for new line)…" '+
+      'oninput="localStorage.setItem(\'ap-draft-'+a.id+'\',this.value)" '+
+      'onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();respondApproval(\''+a.id+'\',\'approved\')}"></textarea>'+
+    '<div class="ap-actions">';
+  for(var i=0;i<opts.length;i++){
+    var o=opts[i];
+    var cls=(o.value==='worked'||o.value==='approved')?'approve'
+           :(o.value==='failed'||o.value==='rejected')?'reject':'warn';
+    html+='<button class="ap-btn '+cls+'" onclick="respondApproval(\''+a.id+'\',\''+o.value+'\')">'+hesc(o.label)+'</button>';
+  }
+  html+='</div></div>';
+  return html;
+}
+
+function apCardDone(a){
+  var resp=a.response||a.status;
+  var tagCls=(resp==='worked'||resp==='approved')?'ok'
+            :(resp==='failed'||resp==='rejected')?'bad':'warn';
+  return '<div class="card-item resolved">'+
+    '<div class="card-title">'+hesc(a.title||'')+'</div>'+
+    '<div class="card-meta">'+
+      '<span class="response-tag '+tagCls+'">'+hesc(resp)+'</span>'+
+      '<span class="ago">'+timeAgo(a.responded_at||a.created_at)+'</span>'+
+    '</div>'+
+    (a.response_note?'<div class="ap-resolved-note">'+hesc(a.response_note)+'</div>':'')+
+    '</div>';
+}
+
+function respondApproval(id,value){
+  var noteEl=document.getElementById('ap-note-'+id);
+  var note=noteEl?(noteEl.value.trim()||null):null;
+  var status=(value==='rejected'||value==='failed')?'rejected':'approved';
+  fetch(SB+'/rest/v1/approvals?id=eq.'+id,{
+    method:'PATCH',
+    headers:Object.assign({},H,{'Prefer':'return=minimal'}),
+    body:JSON.stringify({status:status,response:value,response_note:note,responded_at:new Date().toISOString()})
+  })
+  .then(function(r){
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    localStorage.removeItem('ap-draft-'+id);
+    if(navigator.vibrate)navigator.vibrate([40,40,40]);
+    ss('st-ap','Recorded','ok');
+    loadApprovals();
+  })
+  .catch(function(e){ss('st-ap','Failed: '+e.message,'err')});
+}
+
+/* auto-refresh when on approvals tab */
+setInterval(function(){
+  var p=document.getElementById('page-approvals');
+  if(p && p.classList.contains('on')) loadApprovals();
+},30000);
+
+/* ===== CONTENT PAGE (5c.2.3) ===== */
+var cfilt='all', ccatfilt='all';
+
+function statusColor(s){
+  return 'status-'+(s||'idea');
+}
+
+function loadContent(){
+  var url=SB+'/rest/v1/linkedin_posts?select=*&order=status.asc,created_at.desc&limit=50';
+  if(cfilt!=='all') url+='&status=eq.'+cfilt;
+  if(ccatfilt!=='all') url+='&category=eq.'+ccatfilt;
+  fetch(url,{headers:H})
+    .then(function(r){return r.json()})
+    .then(function(data){
+      var el=document.getElementById('contentList');
+      var counts={idea:0,draft:0,approved:0,scheduled:0,published:0};
+      data.forEach(function(p){counts[p.status]=(counts[p.status]||0)+1});
+      document.getElementById('content-count').textContent=
+        (counts.idea||0)+' ideas, '+(counts.draft||0)+' drafts, '+(counts.approved||0)+' ready, '+(counts.published||0)+' published';
+
+      if(!data.length){
+        el.innerHTML='<div class="es" style="padding:var(--space-7)">No content yet. Ideas appear here when Jarvis captures them.</div>';
+        return;
+      }
+
+      var s='<div class="cards-stack">';
+      for(var i=0;i<data.length;i++){
+        s+=postCard(data[i]);
+      }
+      s+='</div>';
+      el.innerHTML=s;
+    })
+    .catch(function(e){
+      document.getElementById('contentList').innerHTML='<div class="es" style="padding:var(--space-5);color:var(--color-danger)">Failed to load: '+hesc(e.message)+'</div>';
+    });
+}
+
+function postCard(p){
+  var dt=new Date(p.created_at);
+  var ds=dt.toLocaleDateString('hr-HR');
+  var sched=p.scheduled_date?new Date(p.scheduled_date+'T00:00:00').toLocaleDateString('hr-HR'):'';
+  var hasContent=p.content&&p.content.length>0;
+  var pid='post-'+p.id.substring(0,8);
+  var hasEdit=p.published_content&&p.published_content.length>0;
+  var displayContent=hasEdit?p.published_content:p.content;
+
+  var s='<div class="card-item" style="cursor:pointer" onclick="togglePost(\''+pid+'\')">';
+  s+='<div class="post-title-row">';
+  s+='<div class="card-title" style="flex:1;margin-bottom:0">'+hesc(p.title||'(untitled)')+'</div>';
+  s+='<span class="status-pill '+statusColor(p.status)+'">'+hesc(p.status||'idea')+'</span>';
+  s+='</div>';
+
+  if(hasContent){
+    var preview=displayContent.substring(0,140).replace(/\n/g,' ')+(displayContent.length>140?'…':'');
+    s+='<div class="post-preview">'+hesc(preview)+(hasEdit?'<span class="edited-flag">(edited)</span>':'')+'</div>';
+    s+='<div class="post-full" id="'+pid+'">'+hesc(displayContent);
+    if(hasEdit){
+      s+='<div class="original-block">'+
+        '<div class="original-label">ORIGINAL (what Jarvis wrote)</div>'+
+        hesc(p.content)+
+        (p.edit_notes?'<div class="original-label" style="margin-top:var(--space-2)">EDIT NOTES</div>'+hesc(p.edit_notes):'')+
+        '</div>';
+    }
+    s+='</div>';
+    s+='<div class="post-editor" id="ed-'+pid+'" onclick="event.stopPropagation()">'+
+      '<label>FINAL (what you actually published)</label>'+
+      '<textarea id="ta-'+pid+'">'+hesc(hasEdit?p.published_content:p.content)+'</textarea>'+
+      '<label>WHY YOU CHANGED IT (one line — trains the agent)</label>'+
+      '<input type="text" id="nt-'+pid+'" placeholder="e.g. softened the hook, added a bar anecdote" value="'+hesc(p.edit_notes||'')+'">'+
+      '<div class="post-actions" style="margin-top:var(--space-3)">'+
+        '<button class="post-btn success" onclick="savePostEdit(this,\''+p.id+'\',\''+pid+'\')">Save final version</button>'+
+        '<button class="post-btn dim" onclick="closeEditor(\''+pid+'\')">Cancel</button>'+
+      '</div>'+
+      '</div>';
+  }
+
+  s+='<div class="post-tags">';
+  if(p.category){
+    var catLabel=p.category==='ai_operations'?'AI/Ops':p.category==='founder_reality'?'Founder':p.category==='series'?'Series':'Sequel';
+    s+='<span class="post-tag cat-'+p.category+'">'+catLabel+'</span>';
+  }
+  if(p.framework) s+='<span class="post-tag framework">'+hesc(p.framework)+'</span>';
+  if(sched) s+='<span class="post-tag scheduled-date">'+sched+'</span>';
+  s+='<span class="post-tag date">'+ds+'</span>';
+  s+='</div>';
+
+  if(p.status==='published'){
+    var hasStats=p.impressions||p.comments||p.reactions;
+    if(hasStats){
+      s+='<div class="post-stats">';
+      if(p.impressions) s+='<span class="stat-imp">'+p.impressions.toLocaleString()+' views</span>';
+      if(p.reactions)   s+='<span class="stat-rea">'+p.reactions+' reactions</span>';
+      if(p.comments)    s+='<span class="stat-com">'+p.comments+' comments</span>';
+      if(p.reposts)     s+='<span class="stat-rep">'+p.reposts+' reposts</span>';
+      s+='</div>';
+    }
+    var sid='stats-'+p.id.substring(0,8);
+    s+='<div class="stats-editor" id="'+sid+'" onclick="event.stopPropagation()">'+
+      '<div class="stats-label">Statistike</div>'+
+      '<div class="stats-grid">'+
+        '<div><label>Impressions</label><input type="number" id="si-'+sid+'" value="'+(p.impressions||'')+'" placeholder="0"></div>'+
+        '<div><label>Reactions</label><input type="number" id="sr-'+sid+'" value="'+(p.reactions||'')+'" placeholder="0"></div>'+
+        '<div><label>Comments</label><input type="number" id="sc-'+sid+'" value="'+(p.comments||'')+'" placeholder="0"></div>'+
+        '<div><label>Reposts</label><input type="number" id="sp-'+sid+'" value="'+(p.reposts||'')+'" placeholder="0"></div>'+
+      '</div>'+
+      '<div class="post-actions" style="margin-top:var(--space-3)">'+
+        '<button class="post-btn success" onclick="saveStats(this,\''+p.id+'\',\''+sid+'\')">Spremi</button>'+
+        '<button class="post-btn dim" onclick="document.getElementById(\''+sid+'\').style.display=\'none\'">Cancel</button>'+
+      '</div>'+
+      '</div>';
+  }
+
+  s+='<div class="post-actions" onclick="event.stopPropagation()">';
+  if(hasContent){
+    s+='<button class="post-btn primary" onclick="copyPost(this,\''+p.id+'\')">Copy</button>';
+    s+='<button class="post-btn info" onclick="openEditor(\''+pid+'\')">Edit final</button>';
+    if(p.status!=='published') s+='<button class="post-btn warn" onclick="publishPost(this,\''+p.id+'\')">Objavljeno</button>';
+    if(p.status==='published') s+='<button class="post-btn primary" onclick="toggleStats(\'stats-'+p.id.substring(0,8)+'\')">Statistike</button>';
+    if(p.status==='draft')     s+='<button class="post-btn success" onclick="approvePost(this,\''+p.id+'\')">Approve</button>';
+  }
+  s+='<button class="post-btn dim" onclick="deletePost(this,\''+p.id+'\')" aria-label="Delete">×</button>';
+  s+='</div>';
+
+  s+='</div>';
+  return s;
+}
+
+function togglePost(pid){
+  var el=document.getElementById(pid);
+  if(el) el.style.display = el.style.display==='block' ? 'none' : 'block';
+}
+
+function toggleStats(sid){
+  var el=document.getElementById(sid);
+  if(el) el.style.display = el.style.display==='block' ? 'none' : 'block';
+}
+
+function openEditor(pid){
+  var ed=document.getElementById('ed-'+pid);
+  if(!ed) return;
+  ed.style.display='block';
+  var ta=document.getElementById('ta-'+pid);
+  if(ta) ta.focus();
+}
+function closeEditor(pid){
+  var ed=document.getElementById('ed-'+pid);
+  if(ed) ed.style.display='none';
+}
+
+function savePostEdit(btn,id,pid){
+  var ta=document.getElementById('ta-'+pid);
+  var nt=document.getElementById('nt-'+pid);
+  if(!ta) return;
+  var body={
+    published_content:ta.value,
+    edit_notes:nt?nt.value:null,
+    learning_processed:false,
+    updated_at:new Date().toISOString()
+  };
+  btn.disabled=true; btn.textContent='Saving…';
+  fetch(SB+'/rest/v1/linkedin_posts?id=eq.'+id,{method:'PATCH',headers:Object.assign({},H,{'Prefer':'return=minimal'}),body:JSON.stringify(body)})
+    .then(function(r){
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      btn.textContent='Saved';
+      if(navigator.vibrate)navigator.vibrate(50);
+      setTimeout(function(){closeEditor(pid);loadContent()},600);
+    })
+    .catch(function(e){btn.disabled=false;btn.textContent='Save final version';alert('Error: '+e.message)});
+}
+
+function approvePost(btn,id){
+  fetch(SB+'/rest/v1/linkedin_posts?id=eq.'+id,{method:'PATCH',headers:Object.assign({},H,{'Prefer':'return=minimal'}),body:JSON.stringify({status:'approved',updated_at:new Date().toISOString()})})
+    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);btn.textContent='Approved';if(navigator.vibrate)navigator.vibrate(50);setTimeout(loadContent,500)})
+    .catch(function(e){alert('Error: '+e.message)});
+}
+
+function saveStats(btn,id,sid){
+  var imp=parseInt(document.getElementById('si-'+sid).value)||null;
+  var rea=parseInt(document.getElementById('sr-'+sid).value)||null;
+  var com=parseInt(document.getElementById('sc-'+sid).value)||null;
+  var rep=parseInt(document.getElementById('sp-'+sid).value)||null;
+  btn.disabled=true; btn.textContent='Saving…';
+  fetch(SB+'/rest/v1/linkedin_posts?id=eq.'+id,{method:'PATCH',headers:Object.assign({},H,{'Prefer':'return=minimal'}),body:JSON.stringify({impressions:imp,reactions:rea,comments:com,reposts:rep,updated_at:new Date().toISOString()})})
+    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);btn.textContent='Spremljeno';if(navigator.vibrate)navigator.vibrate(50);setTimeout(function(){document.getElementById(sid).style.display='none';loadContent()},600)})
+    .catch(function(e){btn.disabled=false;btn.textContent='Spremi';alert('Error: '+e.message)});
+}
+
+function publishPost(btn,id){
+  if(!confirm('Označiti ovaj post kao objavljen?')) return;
+  fetch(SB+'/rest/v1/linkedin_posts?id=eq.'+id,{method:'PATCH',headers:Object.assign({},H,{'Prefer':'return=minimal'}),body:JSON.stringify({status:'published',published_at:new Date().toISOString(),updated_at:new Date().toISOString()})})
+    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);btn.textContent='Objavljeno';if(navigator.vibrate)navigator.vibrate(50);setTimeout(loadContent,500)})
+    .catch(function(e){alert('Error: '+e.message)});
+}
+
+function deletePost(btn,id){
+  if(!confirm('Obriši ovu ideju?')) return;
+  var card=btn.closest('.card-item'); if(card)card.style.opacity='0.3';
+  fetch(SB+'/rest/v1/linkedin_posts?id=eq.'+id,{method:'DELETE',headers:H})
+    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);if(navigator.vibrate)navigator.vibrate(30);setTimeout(loadContent,300)})
+    .catch(function(e){if(card)card.style.opacity='1';alert('Error: '+e.message)});
+}
+
+function copyPost(btn,id){
+  fetch(SB+'/rest/v1/linkedin_posts?id=eq.'+id+'&select=content',{headers:H})
+    .then(function(r){return r.json()})
+    .then(function(data){
+      if(data[0]&&data[0].content){
+        navigator.clipboard.writeText(data[0].content).then(function(){
+          var orig=btn.textContent;
+          btn.textContent='Copied';
+          if(navigator.vibrate)navigator.vibrate(50);
+          setTimeout(function(){btn.textContent=orig},2000);
+        });
+      }
+    });
+}
+
+/* Filter chip wiring (status + category) */
+(function(){
+  function bindChipGroup(rootId, onChange){
+    var root=document.getElementById(rootId);
+    if(!root) return;
+    root.addEventListener('click',function(ev){
+      var c=ev.target.closest('.chip');
+      if(!c||!root.contains(c)) return;
+      root.querySelectorAll('.chip').forEach(function(x){x.classList.remove('active')});
+      c.classList.add('active');
+      onChange(c.dataset.v);
+    });
+  }
+  bindChipGroup('cfilt',    function(v){cfilt=v;    loadContent()});
+  bindChipGroup('ccatfilt', function(v){ccatfilt=v; loadContent()});
+})();
 
 /* ===== TASKS PAGE (5c.2.2) ===== */
 var TASK_CACHE = {};
@@ -2207,16 +2739,32 @@ function ensureTasksLoaded(){
   whenAuth(function(){loadTasks();loadLPProjects()});
 }
 
+/* Approvals + Content lazy-load (5c.2.3) */
+var _approvalsLoaded=false, _contentLoaded=false;
+function ensureApprovalsLoaded(){
+  if(_approvalsLoaded) { whenAuth(loadApprovals); return; }
+  _approvalsLoaded=true;
+  whenAuth(loadApprovals);
+}
+function ensureContentLoaded(){
+  if(_contentLoaded) { whenAuth(loadContent); return; }
+  _contentLoaded=true;
+  whenAuth(loadContent);
+}
+
 /* Hook into navigate() — augment it to trigger lazy loads per page */
 var _origNavigate = navigate;
 navigate = function(pageId){
   _origNavigate(pageId);
-  if(pageId==='tasks')ensureTasksLoaded();
+  if(pageId==='tasks')     ensureTasksLoaded();
+  if(pageId==='approvals') ensureApprovalsLoaded();
+  if(pageId==='content')   ensureContentLoaded();
 };
 
-/* if URL hash points to tasks on first load, trigger load */
+/* if URL hash points to a lazy page on first load, trigger its load */
 whenAuth(function(){
-  if(window.location.hash==='#tasks'){navigate('tasks')}
+  var h=(window.location.hash||'').replace(/^#/,'');
+  if(h==='tasks'||h==='approvals'||h==='content') navigate(h);
 });
 
 /* ===== SERVICE WORKER ===== */
