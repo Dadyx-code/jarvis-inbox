@@ -1,5 +1,5 @@
-// Jarvis SW v9 — Sprint 5b.2: Invite-user flow (Invite button, modal, OTP result)
-const CACHE = 'jarvis-v9';
+// Jarvis SW v10 — Sprint 5b.3: User-lifecycle actions (Cancel invite / Disable / Enable)
+const CACHE = 'jarvis-v10';
 
 self.addEventListener('install', function(e) {
   self.skipWaiting();
