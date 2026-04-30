@@ -1,5 +1,5 @@
-// Jarvis SW v21 — sprint/5c-2-5b-lifecycle-audit: Admin lifecycle (cancel/disable/enable) + edit-companies + Activity log
-const CACHE = 'jarvis-v21';
+// Jarvis SW v22 — sprint/5c-2-6-account: Account page (identity + sign-out)
+const CACHE = 'jarvis-v22';
 
 self.addEventListener('install', function(e) {
   self.skipWaiting();
