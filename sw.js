@@ -1,5 +1,5 @@
-// Jarvis SW v16 — fix/5c-2-1-recent: Recent server-backed (cross-device sync)
-const CACHE = 'jarvis-v16';
+// Jarvis SW v17 — fix/5c-2-1-recent: source filter (PWA captures only)
+const CACHE = 'jarvis-v17';
 
 self.addEventListener('install', function(e) {
   self.skipWaiting();

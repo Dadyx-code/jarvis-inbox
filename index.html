@@ -1639,7 +1639,9 @@ document.querySelectorAll('#pris .chip').forEach(function(c){c.addEventListener(
 function loadRecent(){
   var el=document.getElementById('hl');
   if(!el)return;
-  fetch(SB+'/rest/v1/inbox?select=id,content,category,priority,company_hint,project_hint,created_at,processed&order=created_at.desc&limit=20',{headers:H})
+  /* source=eq.pwa filters out agent-written rows (Weekly Report, handoff logs, Claude Code sessions, etc.).
+     Pre-migration rows have NULL source — they don't match and stay hidden. */
+  fetch(SB+'/rest/v1/inbox?select=id,content,category,priority,company_hint,project_hint,created_at,processed&source=eq.pwa&order=created_at.desc&limit=20',{headers:H})
     .then(function(r){return r.json()})
     .then(function(data){
       data = data || [];
@@ -1679,7 +1681,7 @@ document.getElementById('sb').addEventListener('click',function(){
   ss('st','Sending to Jarvis…','wait');
   var company=document.getElementById('co').value||null;
   var project=document.getElementById('pr').value||null;
-  fetch(SB+'/rest/v1/inbox',{method:'POST',headers:Object.assign({},H,{'Prefer':'return=minimal'}),body:JSON.stringify({content:content,category:cat,priority:pri,company_hint:company,project_hint:project})})
+  fetch(SB+'/rest/v1/inbox',{method:'POST',headers:Object.assign({},H,{'Prefer':'return=minimal'}),body:JSON.stringify({content:content,category:cat,priority:pri,company_hint:company,project_hint:project,source:'pwa'})})
     .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);
       ss('st','Sent! Jarvis will process this next session.','ok');
       document.getElementById('ct').value='';
