@@ -1,5 +1,5 @@
-// Jarvis SW v10 — Sprint 5b.3: User-lifecycle actions (Cancel invite / Disable / Enable)
-const CACHE = 'jarvis-v10';
+// Jarvis SW v11 — Sprint 5b.4: Edit companies (multi-select reassignment)
+const CACHE = 'jarvis-v11';
 
 self.addEventListener('install', function(e) {
   self.skipWaiting();

@@ -137,6 +137,13 @@ body:not(.locked) #loginGate{display:none !important}
 .user-action-btn.ua-disable:hover{background:#2e1a0a}
 .user-action-btn.ua-enable{border:1px solid #166534;color:#4ade80}
 .user-action-btn.ua-enable:hover{background:#0d2a14}
+.user-action-btn.ua-edit-co{border:1px solid #2a1a0a;color:#888}
+.user-action-btn.ua-edit-co:hover{background:#1a1710;color:#aaa}
+/* edit-companies checklist (Sprint 5b.4) */
+.edit-co-list{max-height:50vh;overflow-y:auto;background:#0f0d0a;border:1px solid #2a1a0a;border-radius:8px;padding:8px;margin-bottom:8px}
+.edit-co-row{display:flex;align-items:center;gap:10px;padding:10px 8px;border-radius:6px;cursor:pointer;color:#ccc;font-size:14px}
+.edit-co-row:hover{background:#14120e}
+.edit-co-row input[type=checkbox]{width:18px;height:18px;accent-color:#F58025;margin:0}
 </style>
 </head>
 <body class="locked">
@@ -277,6 +284,23 @@ body:not(.locked) #loginGate{display:none !important}
       <div class="modal-actions">
         <button type="button" class="btn btn-cancel" id="invCancelBtn">Cancel</button>
         <button type="submit" class="btn" id="invSubmitBtn">Send invite</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- EDIT COMPANIES MODAL (Sprint 5b.4) -->
+<div class="modal-veil" id="editCoVeil">
+  <div class="modal-box">
+    <h2 id="editCoTitle">Edit companies</h2>
+    <div class="sub" id="editCoSub">—</div>
+    <div class="modal-err" id="editCoErr"></div>
+    <form id="editCoForm">
+      <div class="edit-co-list" id="editCoList"><div class="es">Loading…</div></div>
+      <div style="font-size:11px;color:#666;margin-bottom:6px">Empty selection is allowed (user keeps account but loses all company access).</div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-cancel" id="editCoCancelBtn">Cancel</button>
+        <button type="submit" class="btn" id="editCoSaveBtn">Save</button>
       </div>
     </form>
   </div>
@@ -1215,6 +1239,7 @@ function loadCompaniesIntoSelect(){
   fetch(SB+'/rest/v1/rpc/admin_list_companies',{method:'POST',headers:H,body:'{}'})
     .then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.message||('HTTP '+r.status));return d})})
     .then(function(rows){
+      window._allCompanies=rows; /* shared cache with edit-companies modal */
       var opts='<option value="">Select…</option>';
       for(var i=0;i<rows.length;i++) opts+='<option value="'+rows[i].id+'">'+hesc(rows[i].name)+'</option>';
       sel.innerHTML=opts;
@@ -1272,14 +1297,18 @@ document.getElementById('otpDoneBtn').addEventListener('click',function(){docume
 /* ===== end invite-user flow ===== */
 
 /* ===== User-lifecycle actions (Sprint 5b.3) ===== */
-/* Renders Cancel / Disable / Enable buttons per user row. Owner row gets none. */
+/* Renders action buttons per user row: "Edit companies" + state-aware
+   lifecycle button (cancel/disable/enable). Owner row gets none. */
 function adminUserActions(u,disabled){
   if(u.is_owner) return ''; /* owner cannot be modified */
   var html='<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">';
+  /* Edit companies — universal action on any non-owner row. */
+  var companiesPayload=encodeURIComponent(JSON.stringify(u.companies||[]));
+  html+='<button class="user-action-btn ua-edit-co" data-action="edit-companies" data-uid="'+u.id+'" data-name="'+hesc(u.name||'')+'" data-email="'+hesc(u.login_email||u.email||'')+'" data-companies="'+companiesPayload+'">Edit companies</button>';
+  /* Lifecycle — state-aware. */
   if(disabled){
     html+='<button class="user-action-btn ua-enable" data-action="enable" data-uid="'+u.id+'" data-name="'+hesc(u.name||'')+'">Re-enable</button>';
   }else if(!u.last_sign_in_at){
-    /* Never signed in → invite cancellation. Same condition the SQL enforces. */
     html+='<button class="user-action-btn ua-cancel" data-action="cancel" data-uid="'+u.id+'" data-name="'+hesc(u.name||'')+'">Cancel invite</button>';
   }else{
     html+='<button class="user-action-btn ua-disable" data-action="disable" data-uid="'+u.id+'" data-name="'+hesc(u.name||'')+'">Disable</button>';
@@ -1334,12 +1363,85 @@ document.getElementById('adminUsers').addEventListener('click',function(ev){
   var btn=ev.target.closest('.user-action-btn');
   if(!btn) return;
   var action=btn.dataset.action;
-  var uid=btn.dataset.uid;
-  var name=btn.dataset.name;
-  userActionClick(action,uid,name);
+  if(action==='edit-companies'){
+    var current=[];try{current=JSON.parse(decodeURIComponent(btn.dataset.companies||'[]'))}catch(e){}
+    openCompaniesModal(btn.dataset.uid,btn.dataset.name,btn.dataset.email,current);
+    return;
+  }
+  userActionClick(action,btn.dataset.uid,btn.dataset.name);
 });
 document.getElementById('confirmCancelBtn').addEventListener('click',closeConfirm);
 /* ===== end user-lifecycle actions ===== */
+
+/* ===== Edit companies flow (Sprint 5b.4) ===== */
+var _editCoTarget=null; /* {user_id, name, email, currentIds:Set} */
+function openCompaniesModal(userId,name,email,currentCompanies){
+  var currentIds={};for(var i=0;i<currentCompanies.length;i++){currentIds[currentCompanies[i].id]=true}
+  _editCoTarget={user_id:userId,name:name,email:email,currentIds:currentIds};
+  document.getElementById('editCoTitle').textContent='Edit companies for '+name;
+  document.getElementById('editCoSub').textContent=email||'';
+  var errEl=document.getElementById('editCoErr');errEl.classList.remove('show');errEl.textContent='';
+  var saveBtn=document.getElementById('editCoSaveBtn');saveBtn.disabled=false;saveBtn.textContent='Save';
+  var list=document.getElementById('editCoList');list.innerHTML='<div class="es">Loading companies…</div>';
+  /* Open the veil first so the user sees feedback during fetch. */
+  document.getElementById('editCoVeil').classList.add('on');
+  /* Use cached company list if invite-modal already loaded it; else fetch. */
+  if(window._allCompanies&&window._allCompanies.length){
+    renderEditCoChecklist();return;
+  }
+  fetch(SB+'/rest/v1/rpc/admin_list_companies',{method:'POST',headers:H,body:'{}'})
+    .then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.message||('HTTP '+r.status));return d})})
+    .then(function(rows){
+      window._allCompanies=rows;
+      /* Also populate invite-modal dropdown so first user lands either modal first. */
+      var sel=document.getElementById('invCompany');
+      var opts='<option value="">Select…</option>';
+      for(var i=0;i<rows.length;i++) opts+='<option value="'+rows[i].id+'">'+hesc(rows[i].name)+'</option>';
+      sel.innerHTML=opts;_invCompaniesLoaded=true;
+      renderEditCoChecklist();
+    })
+    .catch(function(e){list.innerHTML='<div class="es" style="color:#f87171">Failed: '+hesc(e.message)+'</div>'});
+}
+function renderEditCoChecklist(){
+  var list=document.getElementById('editCoList');
+  var rows=window._allCompanies||[];
+  var html='';
+  for(var j=0;j<rows.length;j++){
+    var c=rows[j];
+    var checked=_editCoTarget.currentIds[c.id]?' checked':'';
+    html+='<label class="edit-co-row"><input type="checkbox" value="'+c.id+'"'+checked+'> <span>'+hesc(c.name)+'</span></label>';
+  }
+  list.innerHTML=html;
+}
+function closeCompaniesModal(){document.getElementById('editCoVeil').classList.remove('on');_editCoTarget=null}
+function submitCompaniesEdit(ev){
+  ev.preventDefault();
+  if(!_editCoTarget) return;
+  var checks=document.querySelectorAll('#editCoList input[type=checkbox]');
+  var selectedIds=[];for(var i=0;i<checks.length;i++){if(checks[i].checked) selectedIds.push(checks[i].value)}
+  var errEl=document.getElementById('editCoErr');errEl.classList.remove('show');errEl.textContent='';
+  var btn=document.getElementById('editCoSaveBtn');btn.disabled=true;btn.textContent='Saving…';
+  var st=document.getElementById('st6');
+  var name=_editCoTarget.name;
+  fetch(SB+'/functions/v1/admin-set-user-companies',{
+    method:'POST',headers:H,
+    body:JSON.stringify({user_id:_editCoTarget.user_id,company_ids:selectedIds})
+  })
+    .then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.error||('HTTP '+r.status)+(d.detail?' — '+d.detail:''));return d})})
+    .then(function(d){
+      var added=(d.companies_added||[]).length;var removed=(d.companies_removed||[]).length;
+      var msg=(added===0&&removed===0)?('No changes for '+name):('Updated '+name+': +'+added+' / -'+removed);
+      st.className='st ok';st.textContent=msg;
+      closeCompaniesModal();loadAdmin();
+    })
+    .catch(function(e){
+      errEl.textContent=e.message;errEl.classList.add('show');
+      btn.disabled=false;btn.textContent='Save';
+    });
+}
+document.getElementById('editCoCancelBtn').addEventListener('click',closeCompaniesModal);
+document.getElementById('editCoForm').addEventListener('submit',submitCompaniesEdit);
+/* ===== end edit-companies flow ===== */
 
 function loadAdmin(){
   var el=document.getElementById('adminUsers');
