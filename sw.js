@@ -1,5 +1,5 @@
-// Jarvis SW v17 — fix/5c-2-1-recent: source filter (PWA captures only)
-const CACHE = 'jarvis-v17';
+// Jarvis SW v18 — sprint/5c-2-3-approvals-content: Approvals + Content pages live
+const CACHE = 'jarvis-v18';
 
 self.addEventListener('install', function(e) {
   self.skipWaiting();
