@@ -799,6 +799,282 @@ main {
 .fab.hidden { display: none; }
 body.drawer-open .fab { opacity: 0; pointer-events: none; }
 
+/* === SEGMENTED FILTER === */
+.segmented {
+  display: inline-flex;
+  background: var(--surface-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: 4px;
+  gap: 2px;
+  margin-bottom: var(--space-4);
+  box-shadow: var(--shadow-bar);
+}
+.seg-btn {
+  border: none;
+  background: transparent;
+  padding: 8px 16px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all var(--motion-fast);
+}
+.seg-btn:hover { color: var(--text-primary); background: var(--surface-hover); }
+.seg-btn.active { background: var(--color-orange-tint); color: var(--color-orange); }
+.seg-btn .seg-count {
+  background: var(--color-neutral-bg);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: var(--radius-full);
+  line-height: 1.4;
+}
+.seg-btn.active .seg-count { background: var(--color-orange); color: var(--text-inverse); }
+
+/* === TASK LIST === */
+.task-list {
+  background: var(--surface-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+.task-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background var(--motion-fast);
+  min-height: 64px;
+}
+.task-row:last-child { border-bottom: none; }
+.task-row:hover { background: var(--surface-hover); }
+.task-checkbox {
+  flex-shrink: 0;
+  width: 22px; height: 22px;
+  border: 2px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: var(--surface-input);
+  cursor: pointer;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--motion-fast);
+}
+.task-checkbox:hover { border-color: var(--color-orange); }
+.task-checkbox svg { opacity: 0; color: var(--text-inverse); transition: opacity var(--motion-fast); }
+.task-row.done .task-checkbox { background: var(--color-orange); border-color: var(--color-orange); }
+.task-row.done .task-checkbox svg { opacity: 1; }
+
+.task-body { flex: 1; min-width: 0; cursor: pointer; }
+.task-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.5;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  word-wrap: break-word;
+}
+.task-row.done .task-title { color: var(--text-muted); text-decoration: line-through; }
+.task-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+.task-row.done .task-desc { text-decoration: line-through; }
+.task-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+  font-size: 12px;
+  color: var(--text-muted);
+  flex-wrap: wrap;
+}
+.task-meta .sep { color: var(--text-light); }
+.task-meta .deadline { display: inline-flex; align-items: center; gap: 4px; }
+.task-meta .deadline.overdue { color: var(--color-danger); font-weight: 500; }
+.task-meta .deadline.today { color: var(--color-warning); font-weight: 500; }
+.task-meta .deadline.soon { color: var(--text-secondary); }
+
+.task-group-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--text-light);
+  padding: var(--space-4) var(--space-4) var(--space-2);
+  background: var(--surface-muted);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.pill-urgent  { background: var(--color-danger-bg);  border-color: var(--color-danger-border);  color: var(--color-danger); }
+.pill-high    { background: var(--color-warning-bg); border-color: var(--color-warning-border); color: var(--color-warning); }
+.pill-low     { background: var(--color-neutral-bg); border-color: var(--color-neutral-border); color: var(--color-neutral); }
+
+.task-actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+  font-size: 12px;
+}
+.task-action-link {
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 2px 0;
+}
+.task-action-link.edit { color: var(--color-orange); }
+.task-action-link.edit:hover { color: var(--color-orange-hover); }
+.task-action-link.delete { color: var(--color-danger); }
+.task-action-link.delete:hover { filter: brightness(1.1); }
+
+/* === LANDING PAGES SECTION === */
+.lp-section { margin-bottom: var(--space-5); }
+.lp-section .section-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--color-info);
+  margin-bottom: var(--space-3);
+}
+.lp-card {
+  background: var(--surface-card);
+  border-radius: var(--radius-lg);
+  border-left: 3px solid var(--color-info);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-4);
+  margin-bottom: var(--space-3);
+}
+.lp-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-2); }
+.lp-name { font-weight: 600; font-size: 15px; color: var(--text-primary); }
+.lp-phase {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  border: 1px solid;
+  font-weight: 700;
+}
+.lp-progress {
+  background: var(--surface-muted);
+  border-radius: var(--radius-sm);
+  height: 6px;
+  margin-bottom: var(--space-2);
+  overflow: hidden;
+}
+.lp-progress-fill { height: 100%; border-radius: var(--radius-sm); transition: width var(--motion-base); }
+.lp-foot { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+.lp-foot .phase-name { font-weight: 500; }
+.lp-foot .next-action { color: var(--text-muted); }
+.lp-approve {
+  display: block;
+  width: 100%;
+  margin-top: var(--space-3);
+  padding: 10px;
+  border: 1px solid var(--color-success-border);
+  background: var(--color-success-bg);
+  color: var(--color-success);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+.lp-approve:hover { filter: brightness(0.97); }
+
+/* === MODAL === */
+.modal-veil {
+  position: fixed;
+  inset: 0;
+  background: var(--scrim);
+  z-index: var(--z-modal);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+}
+.modal-veil.on { display: flex; }
+.modal-box {
+  background: var(--surface-elevated);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  max-width: 480px;
+  width: 100%;
+  max-height: 92vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-fab-hover);
+}
+.modal-box h2 { color: var(--text-primary); font-size: 22px; margin-bottom: var(--space-1); }
+.modal-box .sub { color: var(--text-muted); font-size: 13px; margin-bottom: var(--space-4); }
+.modal-row { margin-bottom: var(--space-3); }
+.modal-row label {
+  display: block;
+  color: var(--text-light);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.modal-row input[type=text],
+.modal-row input[type=date],
+.modal-row select,
+.modal-row textarea {
+  width: 100%;
+  background: var(--surface-input);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-md);
+  padding: 10px var(--space-3);
+  color: var(--text-primary);
+  font-size: 15px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+.modal-row textarea { min-height: 90px; resize: vertical; line-height: 1.5; }
+.modal-row input:focus, .modal-row select:focus, .modal-row textarea:focus {
+  outline: none;
+  border-color: var(--color-orange);
+  box-shadow: var(--focus-ring);
+}
+.modal-row .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+.modal-actions { display: flex; gap: var(--space-2); margin-top: var(--space-4); }
+.modal-actions .btn-modal {
+  flex: 1;
+  height: 44px;
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid;
+  transition: all var(--motion-fast);
+}
+.btn-modal.primary { background: var(--color-orange); color: var(--text-inverse); border-color: var(--color-orange); }
+.btn-modal.primary:hover { background: var(--color-orange-hover); border-color: var(--color-orange-hover); }
+.btn-modal.cancel { background: var(--surface-card); color: var(--text-secondary); border-color: var(--border-default); }
+.btn-modal.cancel:hover { background: var(--surface-hover); }
+.btn-modal.danger { background: transparent; color: var(--color-danger); border-color: var(--color-danger-border); }
+.btn-modal.danger:hover { background: var(--color-danger-bg); }
+
 /* === PLACEHOLDER PAGES === */
 .placeholder {
   background: var(--surface-card);
@@ -1027,13 +1303,28 @@ body.drawer-open .fab { opacity: 0; pointer-events: none; }
 
   <!-- TASKS -->
   <div class="page" id="page-tasks">
-    <div class="page-header"><h1>Tasks</h1><div class="sub">Your task list — coming next.</div></div>
-    <div class="placeholder">
-      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5h6a2 2 0 012 2v14a2 2 0 01-2 2H9a2 2 0 01-2-2V7a2 2 0 012-2z"/><path d="M9 9h6M9 13h6M9 17h4"/></svg>
-      <h2>Tasks lands in 5c.2.2</h2>
-      <p>Active / Completed segmented filter, checkbox toggle, add &amp; edit modals, deadline grouping.</p>
-      <span class="sprint-tag">Sprint 5c.2.2</span>
+    <div class="page-header" style="display:flex;align-items:baseline;gap:var(--space-3);flex-wrap:wrap">
+      <h1>Tasks</h1>
+      <span id="taskCount" style="color:var(--text-muted);font-family:var(--font-body);font-weight:500;font-size:14px">—</span>
     </div>
+
+    <div id="st2" class="st"></div>
+
+    <!-- LP projects (owner-only data, hidden if empty) -->
+    <div id="lpProjects" class="lp-section"></div>
+
+    <!-- Active/Completed segmented filter -->
+    <div class="segmented" role="tablist" aria-label="Task filter">
+      <button class="seg-btn active" data-task-filter="active" role="tab" aria-selected="true">
+        Active <span class="seg-count" id="segActiveCount">0</span>
+      </button>
+      <button class="seg-btn" data-task-filter="completed" role="tab" aria-selected="false">
+        Completed <span class="seg-count" id="segCompletedCount">0</span>
+      </button>
+    </div>
+
+    <div class="task-list" id="taskListActive"><div class="es" style="padding:var(--space-7)"><svg class="es-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5h6a2 2 0 012 2v14a2 2 0 01-2 2H9a2 2 0 01-2-2V7a2 2 0 012-2z"/><path d="M9 9h6M9 13h6M9 17h4"/></svg>Loading…</div></div>
+    <div class="task-list" id="taskListCompleted" style="display:none;margin-top:var(--space-5)"></div>
   </div>
 
   <!-- APPROVALS -->
@@ -1092,6 +1383,60 @@ body.drawer-open .fab { opacity: 0; pointer-events: none; }
   </div>
 
 </main>
+
+<!-- ============ TASK MODAL (add + edit) ============ -->
+<div class="modal-veil" id="taskModal" aria-hidden="true">
+  <div class="modal-box" role="dialog" aria-labelledby="taskModalTitle">
+    <h2 id="taskModalTitle">New task</h2>
+    <div class="sub" id="taskModalSub">What needs doing?</div>
+
+    <div class="modal-row">
+      <label for="tt">Title</label>
+      <input type="text" id="tt" placeholder="Task title…">
+    </div>
+
+    <div class="modal-row">
+      <label for="td">Description (optional)</label>
+      <textarea id="td" placeholder="Notes, context, or details…"></textarea>
+    </div>
+
+    <div class="modal-row">
+      <div class="grid2">
+        <div>
+          <label for="tdate">Deadline</label>
+          <input type="date" id="tdate">
+        </div>
+        <div>
+          <label for="tco">Company</label>
+          <select id="tco">
+            <option value="">— None —</option>
+            <option value="craft-technology">Craft Technology</option>
+            <option value="wine-and-more">Wine &amp; More</option>
+            <option value="tipsy">Tipsy</option>
+            <option value="brza-distribucija">Brza Distribucija</option>
+            <option value="croatian-wine">Croatian Wine</option>
+            <option value="risely-digital">Risely Digital</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-row">
+      <label>Priority</label>
+      <div class="chip-row" id="tpris" style="margin-top:0">
+        <button type="button" class="chip" data-tpri="low">Low</button>
+        <button type="button" class="chip active" data-tpri="normal">Normal</button>
+        <button type="button" class="chip" data-tpri="high">High</button>
+        <button type="button" class="chip" data-tpri="urgent">Urgent</button>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button type="button" class="btn-modal cancel" id="taskModalCancel">Cancel</button>
+      <button type="button" class="btn-modal primary" id="taskModalSave">Add task</button>
+    </div>
+  </div>
+</div>
 
 <!-- ============ FAB ============ -->
 <button class="fab hidden" id="fab" aria-label="New capture">
@@ -1267,10 +1612,12 @@ drawerCloseBtn.addEventListener('click',closeDrawer);
 scrim.addEventListener('click',closeDrawer);
 document.addEventListener('keydown',function(ev){if(ev.key==='Escape')closeDrawer()});
 
-/* ===== FAB ===== */
+/* ===== FAB — page-aware ===== */
 document.getElementById('fab').addEventListener('click',function(){
-  /* For 5c.2.1: FAB on non-Home pages just routes back to Home with focus on textarea.
-     5c.3 polish will replace with capture overlay modal. */
+  var current=document.querySelector('.page.on');
+  var pageId=current?current.id.replace('page-',''):'home';
+  if(pageId==='tasks'){openTaskModal();return}
+  /* default for non-Home, non-Tasks: route to Home + focus textarea (capture overlay = 5c.3) */
   navigate('home');
   setTimeout(function(){var ta=document.getElementById('ct');if(ta)ta.focus()},100);
 });
@@ -1520,6 +1867,346 @@ function loadApprovalsCount(){
       var b2=document.getElementById('ap-badge-drawer');if(b2){b2.textContent=n;b2.style.display=''}
     }).catch(function(){});
 }
+
+/* ===== TASKS PAGE (5c.2.2) ===== */
+var TASK_CACHE = {};
+var taskFilter = 'active'; /* active | completed */
+var tpri = 'normal';
+var taskEditingId = null; /* null = add mode, id = edit mode */
+
+function deadlineInfo(d){
+  if(!d) return {cls:'soon',txt:'No deadline'};
+  var now=new Date(); now.setHours(0,0,0,0);
+  var dl=new Date(d+'T00:00:00');
+  var diff=Math.ceil((dl-now)/(1000*60*60*24));
+  if(diff<0) return {cls:'overdue',txt:Math.abs(diff)+'d overdue', bucket:'overdue'};
+  if(diff===0) return {cls:'today',txt:'Today', bucket:'today'};
+  if(diff===1) return {cls:'today',txt:'Tomorrow', bucket:'this_week'};
+  if(diff<=6) return {cls:'soon',txt:diff+'d left', bucket:'this_week'};
+  return {cls:'soon',txt:diff+'d left', bucket:'later'};
+}
+function fmtDeadline(d){
+  if(!d) return '';
+  var dl=new Date(d+'T00:00:00');
+  return dl.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+}
+
+function priorityPill(p){
+  if(p==='urgent') return '<span class="pill pill-urgent">Urgent</span>';
+  if(p==='high') return '<span class="pill pill-high">High</span>';
+  if(p==='low') return '<span class="pill pill-low">Low</span>';
+  return ''; /* normal = no pill, less visual noise */
+}
+
+function renderTaskRow(t, isDone){
+  TASK_CACHE[t.id]=t;
+  var di=deadlineInfo(t.deadline);
+  var dlText = t.deadline ? (di.bucket==='overdue'||di.bucket==='today' ? di.txt : (fmtDeadline(t.deadline)+' · '+di.txt)) : 'No deadline';
+  var s = '<div class="task-row'+(isDone?' done':'')+'" data-id="'+escHtml(t.id)+'">';
+  s += '<div class="task-checkbox" data-task-toggle="'+escHtml(t.id)+'" role="checkbox" aria-checked="'+(isDone?'true':'false')+'" tabindex="0">';
+  s += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+  s += '</div>';
+  s += '<div class="task-body" data-task-edit="'+escHtml(t.id)+'">';
+  s += '<div class="task-title"><span>'+escHtml(t.title||'(untitled)')+'</span>'+priorityPill(t.priority)+'</div>';
+  if(t.description) s += '<div class="task-desc">'+escHtml(t.description)+'</div>';
+  s += '<div class="task-meta">';
+  s += '<span class="deadline '+di.cls+'">'+escHtml(dlText)+'</span>';
+  if(t.company_hint){s+='<span class="sep">·</span><span>'+escHtml(t.company_hint)+'</span>'}
+  s += '</div>';
+  if(!isDone){
+    s += '<div class="task-actions">';
+    s += '<button class="task-action-link delete" data-task-delete="'+escHtml(t.id)+'">Delete</button>';
+    s += '</div>';
+  }
+  s += '</div></div>';
+  return s;
+}
+
+function loadTasks(){
+  fetch(SB+'/rest/v1/tasks?order=deadline.asc.nullslast,created_at.desc&limit=200',{headers:H})
+    .then(function(r){return r.json()})
+    .then(function(data){
+      data = data || [];
+      var todo = data.filter(function(t){return t.status==='todo'});
+      var done = data.filter(function(t){return t.status==='done'}).slice(0,30);
+
+      /* sort active by priority then deadline */
+      var pa={urgent:0,high:1,normal:2,low:3};
+      todo.sort(function(a,b){
+        if(a.deadline&&!b.deadline) return -1;
+        if(!a.deadline&&b.deadline) return 1;
+        if(a.deadline&&b.deadline){
+          if(a.deadline<b.deadline) return -1;
+          if(a.deadline>b.deadline) return 1;
+        }
+        return (pa[a.priority]||2)-(pa[b.priority]||2);
+      });
+
+      /* group by deadline bucket */
+      var buckets = {overdue:[], today:[], this_week:[], later:[]};
+      todo.forEach(function(t){
+        var b = deadlineInfo(t.deadline).bucket || 'later';
+        buckets[b].push(t);
+      });
+
+      document.getElementById('taskCount').textContent = (taskFilter==='active' ? todo.length+' active' : done.length+' completed');
+      document.getElementById('segActiveCount').textContent = todo.length;
+      document.getElementById('segCompletedCount').textContent = done.length;
+
+      /* active list with group headers */
+      var activeEl = document.getElementById('taskListActive');
+      if(!todo.length){
+        activeEl.innerHTML='<div class="es" style="padding:var(--space-7)"><svg class="es-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5h6a2 2 0 012 2v14a2 2 0 01-2 2H9a2 2 0 01-2-2V7a2 2 0 012-2z"/><path d="M9 9h6M9 13h6M9 17h4"/></svg>No tasks yet — tap the + button below to add one.</div>';
+      } else {
+        var html='';
+        var labels={overdue:'Overdue',today:'Today',this_week:'This week',later:'Later'};
+        ['overdue','today','this_week','later'].forEach(function(k){
+          if(buckets[k].length){
+            html += '<div class="task-group-label">'+labels[k]+'</div>';
+            buckets[k].forEach(function(t){html += renderTaskRow(t,false)});
+          }
+        });
+        activeEl.innerHTML = html;
+      }
+
+      /* completed list (flat, most recent first) */
+      var doneEl = document.getElementById('taskListCompleted');
+      if(!done.length){
+        doneEl.innerHTML='<div class="es" style="padding:var(--space-5)">Nothing completed yet</div>';
+      } else {
+        doneEl.innerHTML = done.map(function(t){return renderTaskRow(t,true)}).join('');
+      }
+    })
+    .catch(function(e){ss('st2','Failed to load tasks: '+e.message,'err')});
+}
+
+function applyTaskFilter(filter){
+  taskFilter = filter;
+  document.querySelectorAll('.seg-btn').forEach(function(b){
+    var on = b.dataset.taskFilter===filter;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-selected', on?'true':'false');
+  });
+  document.getElementById('taskListActive').style.display = filter==='active' ? '' : 'none';
+  document.getElementById('taskListCompleted').style.display = filter==='completed' ? '' : 'none';
+  /* update count text */
+  var todoCount = parseInt(document.getElementById('segActiveCount').textContent||'0',10);
+  var doneCount = parseInt(document.getElementById('segCompletedCount').textContent||'0',10);
+  document.getElementById('taskCount').textContent = filter==='active' ? todoCount+' active' : doneCount+' completed';
+}
+
+document.querySelectorAll('.seg-btn').forEach(function(b){
+  b.addEventListener('click',function(){applyTaskFilter(b.dataset.taskFilter)});
+});
+
+/* event delegation: checkbox toggle + body click + delete */
+document.addEventListener('click',function(e){
+  var cb = e.target.closest('[data-task-toggle]');
+  if(cb){
+    e.stopPropagation();
+    var id=cb.getAttribute('data-task-toggle');
+    var row=cb.closest('.task-row');
+    var isDone=row && row.classList.contains('done');
+    toggleTask(id, !isDone);
+    return;
+  }
+  var del = e.target.closest('[data-task-delete]');
+  if(del){
+    e.stopPropagation();
+    deleteTask(del.getAttribute('data-task-delete'));
+    return;
+  }
+  var body = e.target.closest('[data-task-edit]');
+  if(body){
+    var t=TASK_CACHE[body.getAttribute('data-task-edit')];
+    if(t&&t.status!=='done')openTaskModal(t);
+  }
+});
+
+document.addEventListener('keydown',function(e){
+  if(e.key===' '||e.key==='Enter'){
+    var t=e.target.closest('[data-task-toggle]');
+    if(t){e.preventDefault();t.click()}
+  }
+});
+
+function toggleTask(id, markDone){
+  var body = markDone ? {status:'done',completed_at:new Date().toISOString()} : {status:'todo',completed_at:null};
+  /* optimistic UI */
+  var row=document.querySelector('.task-row[data-id="'+id+'"]');
+  if(row){
+    row.classList.toggle('done', markDone);
+    var cb=row.querySelector('.task-checkbox');
+    if(cb)cb.setAttribute('aria-checked', markDone?'true':'false');
+  }
+  fetch(SB+'/rest/v1/tasks?id=eq.'+id,{method:'PATCH',headers:Object.assign({},H,{'Prefer':'return=minimal'}),body:JSON.stringify(body)})
+    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);
+      if(navigator.vibrate)navigator.vibrate(30);
+      loadTasks(); /* re-fetch to re-bucket */
+    })
+    .catch(function(e){
+      /* roll back optimistic */
+      if(row){row.classList.toggle('done', !markDone);}
+      ss('st2','Error: '+e.message,'err');
+    });
+}
+
+function deleteTask(id){
+  var t=TASK_CACHE[id];
+  var label=t?(t.title||'this task'):'this task';
+  if(!confirm('Delete "'+label+'"?'))return;
+  fetch(SB+'/rest/v1/tasks?id=eq.'+id,{method:'DELETE',headers:H})
+    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);
+      if(navigator.vibrate)navigator.vibrate(30);
+      loadTasks();
+    })
+    .catch(function(e){ss('st2','Error: '+e.message,'err')});
+}
+
+/* === TASK MODAL (add + edit) === */
+function openTaskModal(task){
+  taskEditingId = task ? task.id : null;
+  var modal=document.getElementById('taskModal');
+  document.getElementById('taskModalTitle').textContent = task ? 'Edit task' : 'New task';
+  document.getElementById('taskModalSub').textContent = task ? 'Update task details below.' : 'What needs doing?';
+  document.getElementById('taskModalSave').textContent = task ? 'Save' : 'Add task';
+  document.getElementById('tt').value = task ? (task.title||'') : '';
+  document.getElementById('td').value = task ? (task.description||'') : '';
+  document.getElementById('tdate').value = task ? (task.deadline||'') : '';
+  document.getElementById('tco').value = task ? (task.company_hint||'') : '';
+  tpri = task ? (task.priority||'normal') : 'normal';
+  document.querySelectorAll('#tpris .chip').forEach(function(c){c.classList.toggle('active', c.dataset.tpri===tpri)});
+  modal.classList.add('on');
+  modal.setAttribute('aria-hidden','false');
+  setTimeout(function(){document.getElementById('tt').focus()},50);
+}
+function closeTaskModal(){
+  var m=document.getElementById('taskModal');
+  m.classList.remove('on');
+  m.setAttribute('aria-hidden','true');
+  taskEditingId=null;
+}
+document.getElementById('taskModalCancel').addEventListener('click',closeTaskModal);
+document.getElementById('taskModal').addEventListener('click',function(e){if(e.target===this)closeTaskModal()});
+document.querySelectorAll('#tpris .chip').forEach(function(c){
+  c.addEventListener('click',function(){
+    document.querySelectorAll('#tpris .chip').forEach(function(x){x.classList.remove('active')});
+    c.classList.add('active');
+    tpri=c.dataset.tpri;
+  });
+});
+
+document.getElementById('taskModalSave').addEventListener('click',function(){
+  var title=document.getElementById('tt').value.trim();
+  if(!title){ss('st2','Enter a task title','err');document.getElementById('tt').focus();return}
+  var desc=document.getElementById('td').value.trim()||null;
+  var deadline=document.getElementById('tdate').value||null;
+  var company=document.getElementById('tco').value||null;
+  var btn=this;btn.disabled=true;
+  if(taskEditingId){
+    /* edit */
+    fetch(SB+'/rest/v1/tasks?id=eq.'+taskEditingId,{method:'PATCH',headers:Object.assign({},H,{'Prefer':'return=minimal'}),body:JSON.stringify({title:title,description:desc,deadline:deadline,priority:tpri,company_hint:company,updated_at:new Date().toISOString()})})
+      .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);
+        ss('st2','Task updated','ok');
+        if(navigator.vibrate)navigator.vibrate(50);
+        closeTaskModal();
+        loadTasks();
+      })
+      .catch(function(e){ss('st2','Failed: '+e.message,'err')})
+      .finally(function(){btn.disabled=false});
+  } else {
+    /* add */
+    fetch(SB+'/rest/v1/tasks',{method:'POST',headers:Object.assign({},H,{'Prefer':'return=minimal'}),body:JSON.stringify({title:title,description:desc,deadline:deadline,priority:tpri,company_hint:company,source:'manual'})})
+      .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);
+        ss('st2','Task added','ok');
+        if(navigator.vibrate)navigator.vibrate(50);
+        closeTaskModal();
+        loadTasks();
+      })
+      .catch(function(e){ss('st2','Failed: '+e.message,'err')})
+      .finally(function(){btn.disabled=false});
+  }
+});
+
+document.addEventListener('keydown',function(e){
+  var modal=document.getElementById('taskModal');
+  if(modal.classList.contains('on')){
+    if(e.key==='Escape')closeTaskModal();
+    if((e.metaKey||e.ctrlKey)&&e.key==='Enter'){e.preventDefault();document.getElementById('taskModalSave').click()}
+  }
+});
+
+/* === LANDING PAGES (lp_projects) === */
+var phaseNames=['','Intake','Research','Copy Brief','Write Copy','Design Brief','Build Page','Launch'];
+var phaseColors=['','#999999','#7c3aed','#F58025','#fb923c','#2563eb','#27ae60','#e74c3c'];
+
+function loadLPProjects(){
+  fetch(SB+'/rest/v1/lp_next_actions?select=*&order=name',{headers:H})
+    .then(function(r){return r.json()})
+    .then(function(data){
+      var el=document.getElementById('lpProjects');
+      if(!el) return;
+      if(!data||!data.length){el.innerHTML='';return}
+      var s='<div class="section-label">Landing pages</div>';
+      for(var i=0;i<data.length;i++){
+        var p=data[i];
+        var pct=Math.max(0,Math.min(100,Math.round(((p.current_phase-1)/7)*100)));
+        var pcolor=phaseColors[p.current_phase]||'#999999';
+        var actionLabel = p.next_action==='await_approval' ? 'Awaiting your approval' :
+                          p.next_action==='advance' ? 'Ready to advance' :
+                          ((p.assigned_agent||'')+(p.overnight_safe?' (overnight OK)':' (session)'));
+        s+='<div class="lp-card" style="border-left-color:'+pcolor+'">';
+        s+='<div class="lp-head">';
+        s+='<div class="lp-name">'+escHtml(p.name)+'</div>';
+        s+='<span class="lp-phase" style="border-color:'+pcolor+';color:'+pcolor+'">Phase '+p.current_phase+'/7</span>';
+        s+='</div>';
+        s+='<div class="lp-progress"><div class="lp-progress-fill" style="width:'+pct+'%;background:'+pcolor+'"></div></div>';
+        s+='<div class="lp-foot"><span class="phase-name" style="color:'+pcolor+'">'+escHtml(phaseNames[p.current_phase]||'')+'</span>';
+        s+='<span class="next-action">'+escHtml(actionLabel)+'</span></div>';
+        if(p.next_action==='await_approval'){
+          s+='<button class="lp-approve" onclick="approveLPPhase(\''+escHtml(p.id)+'\','+p.current_phase+')">Approve Phase '+p.current_phase+'</button>';
+        }
+        s+='</div>';
+      }
+      el.innerHTML=s;
+    })
+    .catch(function(){});
+}
+
+function approveLPPhase(projectId,phase){
+  if(!confirm('Approve Phase '+phase+'? This advances the project to Phase '+(phase+1)+'.'))return;
+  var body={};
+  body['phase_'+phase+'_approved']=true;
+  body['phase_'+phase+'_approved_at']=new Date().toISOString();
+  body.current_phase=phase+1;
+  body.updated_at=new Date().toISOString();
+  fetch(SB+'/rest/v1/lp_projects?id=eq.'+projectId,{method:'PATCH',headers:Object.assign({},H,{'Prefer':'return=minimal'}),body:JSON.stringify(body)})
+    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);
+      if(navigator.vibrate)navigator.vibrate(50);
+      loadLPProjects();
+    })
+    .catch(function(e){alert('Phase gate error: '+e.message)});
+}
+
+/* Tasks page lazy-load: fire when navigating to it (or first time on app load if landed on tasks) */
+var _tasksLoaded=false;
+function ensureTasksLoaded(){
+  if(_tasksLoaded)return;
+  _tasksLoaded=true;
+  whenAuth(function(){loadTasks();loadLPProjects()});
+}
+
+/* Hook into navigate() — augment it to trigger lazy loads per page */
+var _origNavigate = navigate;
+navigate = function(pageId){
+  _origNavigate(pageId);
+  if(pageId==='tasks')ensureTasksLoaded();
+};
+
+/* if URL hash points to tasks on first load, trigger load */
+whenAuth(function(){
+  if(window.location.hash==='#tasks'){navigate('tasks')}
+});
 
 /* ===== SERVICE WORKER ===== */
 if('serviceWorker' in navigator){
