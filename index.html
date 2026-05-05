@@ -1273,6 +1273,8 @@ body.drawer-open .fab { opacity: 0; pointer-events: none; }
 .user-action-btn.ua-disable:hover { background: var(--color-warning-bg); }
 .user-action-btn.ua-enable  { color: var(--color-success); border-color: var(--color-success-border); }
 .user-action-btn.ua-enable:hover  { background: var(--color-success-bg); }
+.user-action-btn.ua-resend  { color: var(--color-orange); border-color: var(--color-orange-border); }
+.user-action-btn.ua-resend:hover  { background: var(--color-orange-tint); }
 
 /* Edit-companies modal — checkbox list */
 .edit-co-list {
@@ -2992,6 +2994,7 @@ function submitInvite(ev){
 }
 
 function showOtpResult(d){
+  document.getElementById('otpTitle').textContent=d.title||'Invite created';
   var sub=(d.name||'')+' · '+(d.email||'')+(d.company_name?' · '+d.company_name:'');
   document.getElementById('otpSub').textContent=sub;
   document.getElementById('otpCode').textContent=d.email_otp||'—';
@@ -3033,6 +3036,7 @@ function adminUserActions(u, disabled){
   if(disabled){
     html+='<button class="user-action-btn ua-enable" data-action="enable" data-uid="'+u.id+'" data-name="'+hesc(u.name||'')+'">Re-enable</button>';
   }else if(!u.last_sign_in_at){
+    html+='<button class="user-action-btn ua-resend" data-action="resend-otp" data-uid="'+u.id+'" data-name="'+hesc(u.name||'')+'" data-email="'+hesc(u.login_email||u.email||'')+'">Resend OTP</button>';
     html+='<button class="user-action-btn ua-cancel" data-action="cancel" data-uid="'+u.id+'" data-name="'+hesc(u.name||'')+'">Cancel invite</button>';
   }else{
     html+='<button class="user-action-btn ua-disable" data-action="disable" data-uid="'+u.id+'" data-name="'+hesc(u.name||'')+'">Disable</button>';
@@ -3068,6 +3072,31 @@ function runUserAction(action, userId, userName){
     .catch(function(e){ ss('st-ad',e.message,'err'); });
 }
 
+/* Re-issue an OTP for a never-signed-in user. Calls jarvis-issue-link
+   (which calls admin.auth.admin.generateLink under the hood, overwriting the
+   confirmation_token hash so verifyOtp picks up the new code). Shows the
+   same one-time OTP modal as the initial invite. No confirm step — the
+   only side-effect is overwriting an unused secret. */
+function resendOtp(userId, userName, userEmail){
+  ss('st-ad','Issuing new OTP for '+userName+'…','wait');
+  fetch(SB+'/functions/v1/jarvis-issue-link',{
+    method:'POST',headers:H,
+    body:JSON.stringify({email:userEmail})
+  })
+    .then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.error||('HTTP '+r.status)+(d.detail?' — '+d.detail:''));return d})})
+    .then(function(d){
+      ss('st-ad','New OTP issued for '+userName,'ok');
+      showOtpResult({
+        title: 'New OTP issued',
+        name: userName,
+        email: d.email||userEmail,
+        company_name: null,
+        email_otp: d.email_otp
+      });
+    })
+    .catch(function(e){ ss('st-ad',e.message,'err'); });
+}
+
 /* Confirm modal — generic, reused for any destructive action */
 function openConfirm(message,onConfirm){
   document.getElementById('confirmMsg').textContent=message;
@@ -3089,6 +3118,10 @@ function closeConfirm(){document.getElementById('confirmVeil').classList.remove(
       var current=[];
       try{current=JSON.parse(decodeURIComponent(btn.dataset.companies||'[]'))}catch(e){}
       openCompaniesModal(btn.dataset.uid, btn.dataset.name, btn.dataset.email, current);
+      return;
+    }
+    if(action==='resend-otp'){
+      resendOtp(btn.dataset.uid, btn.dataset.name, btn.dataset.email);
       return;
     }
     userActionClick(action, btn.dataset.uid, btn.dataset.name);
