@@ -1331,6 +1331,53 @@ body.drawer-open .fab { opacity: 0; pointer-events: none; }
 .audit-badge.audit-default       { color: var(--text-muted);    background: var(--color-neutral-bg); border-color: var(--color-neutral-border); }
 
 /* === SHARPNESS (Sprint 5e.1) === */
+.sharp-guide {
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+  box-shadow: var(--shadow-card);
+}
+.sharp-guide-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+.sharp-guide p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  margin-bottom: var(--space-3);
+}
+.sharp-guide p:last-child { margin-bottom: 0; }
+.sharp-guide-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-2);
+}
+@media (min-width: 768px) {
+  .sharp-guide-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.sharp-guide-item {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  background: var(--surface-muted);
+}
+.sharp-guide-item b {
+  display: block;
+  font-size: 12px;
+  color: var(--text-primary);
+  margin-bottom: 3px;
+}
+.sharp-guide-item span {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
 .sharp-kpis {
   display: grid;
   grid-template-columns: 1fr;
@@ -1367,6 +1414,14 @@ body.drawer-open .fab { opacity: 0; pointer-events: none; }
 }
 .sharp-value .unit { font-size: 13px; color: var(--text-muted); font-weight: 500; margin-left: 4px; }
 .sharp-target { margin-top: 8px; font-size: 12px; color: var(--text-muted); line-height: 1.4; }
+.sharp-plain {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
 .sharp-table {
   background: var(--surface-card);
   border: 1px solid var(--border-subtle);
@@ -1868,33 +1923,63 @@ body.drawer-open .fab { opacity: 0; pointer-events: none; }
 
   <!-- SHARPNESS (owner-only) -->
   <div class="page" id="page-sharpness">
-    <div class="page-header"><h1>Sharpness</h1><div class="sub" id="sh-sub">Boot, recall, corrections, decay.</div></div>
+    <div class="page-header"><h1>Sharpness</h1><div class="sub" id="sh-sub">How sharp Jarvis feels, measured with numbers.</div></div>
     <div id="st-sh" class="st"></div>
+
+    <div class="sharp-guide">
+      <div class="sharp-guide-title">Do I need to use this?</div>
+      <p>No daily homework. This page is mostly for checking why Jarvis feels slow, forgetful, or too confident. Use it when something feels off, or when we are about to start the next brain-cleanup step.</p>
+      <div class="sharp-guide-grid">
+        <div class="sharp-guide-item">
+          <b>Green is good</b>
+          <span>Jarvis is staying inside the target.</span>
+        </div>
+        <div class="sharp-guide-item">
+          <b>Yellow means watch it</b>
+          <span>Not broken, but worth checking if it keeps happening.</span>
+        </div>
+        <div class="sharp-guide-item">
+          <b>Red means investigate</b>
+          <span>Something is probably making Jarvis worse or heavier.</span>
+        </div>
+        <div class="sharp-guide-item">
+          <b>The table is history</b>
+          <span>Each row is one day, so we can see trends instead of guessing.</span>
+        </div>
+      </div>
+    </div>
 
     <div class="sharp-kpis">
       <div class="sharp-kpi" id="shBootCard">
         <div class="sharp-label">Boot p95</div>
         <div class="sharp-value" id="shBootP95">—</div>
         <div class="sharp-target">Target under 2,500 tokens</div>
+        <div class="sharp-plain">How much brain-stuff Jarvis loads at startup. Lower usually means faster and less confused.</div>
       </div>
       <div class="sharp-kpi" id="shLatencyCard">
         <div class="sharp-label">Latency p95</div>
         <div class="sharp-value" id="shLatencyP95">—</div>
         <div class="sharp-target">Target under 2,500 ms</div>
+        <div class="sharp-plain">How long startup takes. Lower means Jarvis gets ready faster.</div>
       </div>
       <div class="sharp-kpi" id="shRecallCard">
         <div class="sharp-label">Recall calls</div>
         <div class="sharp-value" id="shRecallCalls">—</div>
         <div class="sharp-target">Target at least 2 early calls</div>
+        <div class="sharp-plain">How often Jarvis checks Brain instead of guessing from memory. Higher is better when facts matter.</div>
       </div>
       <div class="sharp-kpi" id="shCorrectionsCard">
         <div class="sharp-label">Corrections</div>
         <div class="sharp-value" id="shCorrections">—</div>
         <div class="sharp-target">Target below 1 daily average</div>
+        <div class="sharp-plain">How often you had to say "no, that is wrong." Lower means Jarvis is behaving better.</div>
       </div>
     </div>
 
     <div class="section-label">Daily summary <span class="team-count" id="shRowsCount"></span></div>
+    <div class="page-header" style="margin-bottom:var(--space-3)">
+      <div class="sub">Read left to right: startup size, startup speed, Brain lookups, your corrections, and old knowledge archived.</div>
+    </div>
     <div id="sharpnessRows" class="sharp-table">
       <div class="es" style="padding:var(--space-5)">Loading…</div>
     </div>
