@@ -1161,6 +1161,9 @@ body.drawer-open .fab { opacity: 0; pointer-events: none; }
 .team-card-tag.human { background: var(--color-info-bg); color: var(--color-info); }
 .team-card-tag.global { background: var(--color-orange-tint); color: var(--color-orange); }
 .team-card-tag.deploy { background: var(--color-success-bg); color: var(--color-success); }
+.team-card-tag.health-green { background: var(--color-success-bg); color: var(--color-success); }
+.team-card-tag.health-yellow { background: var(--color-warning-bg); color: var(--color-warning); }
+.team-card-tag.health-red { background: var(--color-danger-bg); color: var(--color-danger); }
 .team-card-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin-bottom: var(--space-2); }
 .team-card-meta { font-size: 11px; color: var(--text-light); display: flex; gap: var(--space-3); flex-wrap: wrap; }
 .team-card-recent {
@@ -1168,6 +1171,10 @@ body.drawer-open .fab { opacity: 0; pointer-events: none; }
   margin-top: var(--space-2); padding-top: var(--space-2);
   border-top: 1px solid var(--border-subtle);
 }
+.team-health-lines { font-size: 11px; line-height: 1.55; color: var(--text-secondary); border-top: 1px solid var(--border-subtle); padding-top: var(--space-2); margin-top: var(--space-2); }
+.team-health-lines .bad { color: var(--color-danger); font-weight: 600; }
+.team-health-lines .warn { color: var(--color-warning); font-weight: 600; }
+.team-health-lines .ok { color: var(--color-success); font-weight: 600; }
 .team-skill { font-size: 11px; font-weight: 600; color: var(--color-orange); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
 .team-learning { font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 6px; }
 @media (min-width: 1024px) {
@@ -2981,16 +2988,18 @@ function loadTeam(){
   var tmAg  = SB+'/rest/v1/registry_active_agents?select=name,kind,scope,scope_deploy,description,updated_at&order=name.asc&limit=80';
   var tmRun = SB+'/rest/v1/agent_results?select=agent_name,status,created_at&order=created_at.desc&limit=80';
   var tmInt = SB+'/rest/v1/agent_interactions?select=user_id,ts,prompt_excerpt,response_excerpt&order=ts.desc&limit=80';
+  var tmUsers = SB+'/rest/v1/rpc/admin_list_users';
   var fopt = {headers:H};
   Promise.all([
     fetch(tmEmp,fopt).then(function(r){return r.json()}).catch(function(){return []}),
     fetch(tmAg,fopt).then(function(r){return r.json()}).catch(function(){return []}),
     fetch(tmRun,fopt).then(function(r){return r.json()}).catch(function(){return []}),
-    fetch(tmInt,fopt).then(function(r){return r.json()}).catch(function(){return []})
+    fetch(tmInt,fopt).then(function(r){return r.json()}).catch(function(){return []}),
+    fetch(tmUsers,{method:'POST',headers:H,body:'{}'}).then(function(r){return r.json()}).catch(function(){return []})
   ]).then(function(results){
-    var emp=results[0]||[], ag=results[1]||[], runs=results[2]||[], intr=results[3]||[];
-    var activity=buildTeamActivity(emp, intr);
-    paintTeamHumans(emp, intr);
+    var emp=Array.isArray(results[0])?results[0]:[], ag=Array.isArray(results[1])?results[1]:[], runs=Array.isArray(results[2])?results[2]:[], intr=Array.isArray(results[3])?results[3]:[], users=Array.isArray(results[4])?results[4]:[];
+    var activity=buildTeamActivity(emp, intr, users);
+    paintTeamHumans(emp, intr, users);
     paintTeamAgents(ag, runs);
     paintTeamLearnings(activity.slice(0,15));
     var totals=[];
@@ -3010,16 +3019,19 @@ function groupCount(rows, key){
   return Object.keys(seen).length;
 }
 
-function buildEmployeeNameMap(rows){
+function buildEmployeeNameMap(rows, users){
   var names={};
+  for(var j=0;j<(users||[]).length;j++){
+    if(users[j].id && users[j].name) names[users[j].id]=users[j].name;
+  }
   for(var i=0;i<rows.length;i++){
     if(rows[i].user_id && rows[i].employee_name) names[rows[i].user_id]=rows[i].employee_name;
   }
   return names;
 }
 
-function buildTeamActivity(knowledgeRows, interactionRows){
-  var names=buildEmployeeNameMap(knowledgeRows);
+function buildTeamActivity(knowledgeRows, interactionRows, users){
+  var names=buildEmployeeNameMap(knowledgeRows, users);
   var out=[];
   for(var i=0;i<knowledgeRows.length;i++){
     var k=knowledgeRows[i];
@@ -3045,49 +3057,97 @@ function buildTeamActivity(knowledgeRows, interactionRows){
   return out.sort(function(a,b){return new Date(b.created_at)-new Date(a.created_at)});
 }
 
-function paintTeamHumans(rows, interactionRows){
+function hoursAgo(ts){
+  if(!ts) return Infinity;
+  var t=new Date(ts).getTime();
+  if(!isFinite(t)) return Infinity;
+  return (Date.now()-t)/36e5;
+}
+
+function newerDate(a,b){
+  if(!a) return b||null;
+  if(!b) return a||null;
+  return new Date(a)>new Date(b)?a:b;
+}
+
+function runtimeHealth(p){
+  var chatH=hoursAgo(p.lastChat);
+  var knowH=hoursAgo(p.lastKnowledge);
+  var loginH=hoursAgo(p.lastLogin);
+  var issues=[];
+  var level='green';
+  if(!p.lastLogin){ level='red'; issues.push('login missing'); }
+  else if(loginH>24*14 && level!=='red'){ level='yellow'; issues.push('login stale'); }
+  if(!p.lastChat){ level='red'; issues.push('chat telemetry missing'); }
+  else if(chatH>24*5){ level='red'; issues.push('chat stale >5d'); }
+  else if(chatH>48 && level!=='red'){ level='yellow'; issues.push('chat stale >48h'); }
+  if(!p.lastKnowledge){ level='red'; issues.push('knowledge missing'); }
+  else if(knowH>24*7){ level='red'; issues.push('knowledge stale >7d'); }
+  else if(knowH>72 && level!=='red'){ level='yellow'; issues.push('knowledge stale >72h'); }
+  return {level:level, label:level==='green'?'green':(level==='yellow'?'watch':'red'), issues:issues};
+}
+
+function paintTeamHumans(rows, interactionRows, users){
   var el=document.getElementById('tmHumans');
   var lbl=document.getElementById('tm-humans-count');
   if(!el) return;
-  if(!rows.length){
+  if(!rows.length && !(users||[]).length){
     el.innerHTML='<div class="es" style="padding:var(--space-5)">No employee activity yet.</div>';
     if(lbl) lbl.textContent='';
     return;
   }
-  /* group by employee_name, capture latest Brain note and latest Jarvis chat */
+  /* group by user, capture login, latest Brain note and latest Jarvis chat */
   var by={};
+  for(var u=0;u<(users||[]).length;u++){
+    var user=users[u];
+    if(user.is_owner) continue;
+    if(!user.last_sign_in_at && !user.last_active_at) continue;
+    by[user.id]={name:user.name||user.email||'(no name)', count:0, chats:0, last:null, recent:[], user_id:user.id, lastLogin:user.last_sign_in_at||null, lastKnowledge:null, lastChat:null};
+  }
   for(var i=0;i<rows.length;i++){
     var r=rows[i]; var n=r.employee_name; if(!n) continue;
-    if(!by[n]) by[n]={name:n, count:0, chats:0, last:r.created_at, recent:[], user_id:r.user_id};
-    by[n].count++;
-    if(by[n].recent.length<2 && r.title) by[n].recent.push(r.title);
-    if(new Date(r.created_at) > new Date(by[n].last)) by[n].last=r.created_at;
+    var key=r.user_id||n;
+    if(!by[key]) by[key]={name:n, count:0, chats:0, last:null, recent:[], user_id:r.user_id, lastLogin:null, lastKnowledge:null, lastChat:null};
+    by[key].count++;
+    by[key].lastKnowledge=newerDate(by[key].lastKnowledge,r.created_at);
+    by[key].last=newerDate(by[key].last,r.created_at);
+    if(by[key].recent.length<2 && r.title) by[key].recent.push(r.title);
   }
-  var names=buildEmployeeNameMap(rows);
+  var names=buildEmployeeNameMap(rows, users);
   for(var j=0;j<(interactionRows||[]).length;j++){
-    var x=interactionRows[j]; var xn=names[x.user_id]; if(!xn || !by[xn]) continue;
-    by[xn].chats++;
-    if(x.prompt_excerpt && by[xn].recent.length<2) by[xn].recent.push(x.prompt_excerpt);
-    if(new Date(x.ts) > new Date(by[xn].last)) by[xn].last=x.ts;
+    var x=interactionRows[j]; var xn=names[x.user_id]; if(!xn) continue;
+    if(!by[x.user_id]) by[x.user_id]={name:xn, count:0, chats:0, last:null, recent:[], user_id:x.user_id, lastLogin:null, lastKnowledge:null, lastChat:null};
+    by[x.user_id].chats++;
+    by[x.user_id].lastChat=newerDate(by[x.user_id].lastChat,x.ts);
+    by[x.user_id].last=newerDate(by[x.user_id].last,x.ts);
+    if(x.prompt_excerpt && by[x.user_id].recent.length<2) by[x.user_id].recent.push(x.prompt_excerpt);
   }
   var list=Object.keys(by).map(function(k){return by[k]}).sort(function(a,b){
-    return new Date(b.last)-new Date(a.last);
+    return new Date(b.last||b.lastLogin||0)-new Date(a.last||a.lastLogin||0);
   });
   if(lbl) lbl.textContent = '('+list.length+')';
   var html=list.map(function(p){
+    var h=runtimeHealth(p);
     var recent=p.recent.length
       ? '<div class="team-card-recent">'+p.recent.map(function(t){return '· '+hesc(t)}).join('<br>')+'</div>'
       : '';
+    var health='<div class="team-health-lines">'+
+      '<div><span class="'+(p.lastLogin?'ok':'bad')+'">login</span>: '+(p.lastLogin?timeAgo(p.lastLogin):'missing')+'</div>'+
+      '<div><span class="'+(p.lastChat?'ok':'bad')+'">chat hook</span>: '+(p.lastChat?timeAgo(p.lastChat):'missing')+'</div>'+
+      '<div><span class="'+(p.lastKnowledge?'ok':'bad')+'">knowledge</span>: '+(p.lastKnowledge?timeAgo(p.lastKnowledge):'missing')+'</div>'+
+      (h.issues.length?'<div><span class="'+(h.level==='red'?'bad':'warn')+'">'+hesc(h.issues.join(' · '))+'</span></div>':'')+
+    '</div>';
     return '<div class="card-item">'+
       '<div class="team-card-head">'+
         '<div class="team-card-name">'+hesc(p.name)+'</div>'+
-        '<span class="team-card-tag human">human</span>'+
+        '<span class="team-card-tag health-'+h.level+'">'+hesc(h.label)+'</span>'+
       '</div>'+
       '<div class="team-card-meta">'+
         '<span>'+p.count+' note'+(p.count===1?'':'s')+'</span>'+
         (p.chats?'<span>'+p.chats+' chat'+(p.chats===1?'':'s')+'</span>':'')+
-        '<span>last active '+timeAgo(p.last)+'</span>'+
+        '<span>last active '+(p.last?timeAgo(p.last):'never')+'</span>'+
       '</div>'+
+      health+
       recent+
     '</div>';
   }).join('');

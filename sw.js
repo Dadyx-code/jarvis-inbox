@@ -1,5 +1,5 @@
-// Jarvis SW v24 - team last-active includes employee Jarvis chat telemetry
-const CACHE = 'jarvis-v24';
+// Jarvis SW v25 - team health separates login, chat telemetry, and knowledge
+const CACHE = 'jarvis-v25';
 
 self.addEventListener('install', function(e) {
   self.skipWaiting();
