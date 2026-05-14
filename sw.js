@@ -1,5 +1,5 @@
-// Jarvis SW v23 - team activity reads employee Brain activity, not skill_learnings
-const CACHE = 'jarvis-v23';
+// Jarvis SW v24 - team last-active includes employee Jarvis chat telemetry
+const CACHE = 'jarvis-v24';
 
 self.addEventListener('install', function(e) {
   self.skipWaiting();

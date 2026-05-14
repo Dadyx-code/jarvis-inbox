@@ -2980,20 +2980,23 @@ function loadTeam(){
   var tmEmp = SB+'/rest/v1/v_employee_activity?select=user_id,employee_name,knowledge_type,title,created_at&order=created_at.desc&limit=200';
   var tmAg  = SB+'/rest/v1/registry_active_agents?select=name,kind,scope,scope_deploy,description,updated_at&order=name.asc&limit=80';
   var tmRun = SB+'/rest/v1/agent_results?select=agent_name,status,created_at&order=created_at.desc&limit=80';
+  var tmInt = SB+'/rest/v1/agent_interactions?select=user_id,ts,prompt_excerpt,response_excerpt&order=ts.desc&limit=80';
   var fopt = {headers:H};
   Promise.all([
     fetch(tmEmp,fopt).then(function(r){return r.json()}).catch(function(){return []}),
     fetch(tmAg,fopt).then(function(r){return r.json()}).catch(function(){return []}),
-    fetch(tmRun,fopt).then(function(r){return r.json()}).catch(function(){return []})
+    fetch(tmRun,fopt).then(function(r){return r.json()}).catch(function(){return []}),
+    fetch(tmInt,fopt).then(function(r){return r.json()}).catch(function(){return []})
   ]).then(function(results){
-    var emp=results[0]||[], ag=results[1]||[], runs=results[2]||[], lrn=emp.slice(0,15);
-    paintTeamHumans(emp);
+    var emp=results[0]||[], ag=results[1]||[], runs=results[2]||[], intr=results[3]||[];
+    var activity=buildTeamActivity(emp, intr);
+    paintTeamHumans(emp, intr);
     paintTeamAgents(ag, runs);
-    paintTeamLearnings(lrn);
+    paintTeamLearnings(activity.slice(0,15));
     var totals=[];
     if(emp.length) totals.push((groupCount(emp,'employee_name'))+' humans');
     if(ag.length)  totals.push(ag.length+' agents');
-    if(lrn.length) totals.push(lrn.length+' activities');
+    if(activity.length) totals.push(activity.length+' activities');
     var sub=document.getElementById('tm-count');
     if(sub) sub.textContent = totals.join(' • ') || 'Humans, AI specialists, team activity';
   }).catch(function(e){
@@ -3007,7 +3010,42 @@ function groupCount(rows, key){
   return Object.keys(seen).length;
 }
 
-function paintTeamHumans(rows){
+function buildEmployeeNameMap(rows){
+  var names={};
+  for(var i=0;i<rows.length;i++){
+    if(rows[i].user_id && rows[i].employee_name) names[rows[i].user_id]=rows[i].employee_name;
+  }
+  return names;
+}
+
+function buildTeamActivity(knowledgeRows, interactionRows){
+  var names=buildEmployeeNameMap(knowledgeRows);
+  var out=[];
+  for(var i=0;i<knowledgeRows.length;i++){
+    var k=knowledgeRows[i];
+    if(!k.employee_name) continue;
+    out.push({
+      employee_name:k.employee_name,
+      activity_type:k.knowledge_type||'note',
+      title:k.title||'',
+      created_at:k.created_at
+    });
+  }
+  for(var j=0;j<interactionRows.length;j++){
+    var r=interactionRows[j];
+    var n=names[r.user_id];
+    if(!n || !r.prompt_excerpt) continue;
+    out.push({
+      employee_name:n,
+      activity_type:'Jarvis chat',
+      title:r.prompt_excerpt,
+      created_at:r.ts
+    });
+  }
+  return out.sort(function(a,b){return new Date(b.created_at)-new Date(a.created_at)});
+}
+
+function paintTeamHumans(rows, interactionRows){
   var el=document.getElementById('tmHumans');
   var lbl=document.getElementById('tm-humans-count');
   if(!el) return;
@@ -3016,14 +3054,21 @@ function paintTeamHumans(rows){
     if(lbl) lbl.textContent='';
     return;
   }
-  /* group by employee_name, capture last_active and recent titles */
+  /* group by employee_name, capture latest Brain note and latest Jarvis chat */
   var by={};
   for(var i=0;i<rows.length;i++){
     var r=rows[i]; var n=r.employee_name; if(!n) continue;
-    if(!by[n]) by[n]={name:n, count:0, last:r.created_at, recent:[]};
+    if(!by[n]) by[n]={name:n, count:0, chats:0, last:r.created_at, recent:[], user_id:r.user_id};
     by[n].count++;
     if(by[n].recent.length<2 && r.title) by[n].recent.push(r.title);
     if(new Date(r.created_at) > new Date(by[n].last)) by[n].last=r.created_at;
+  }
+  var names=buildEmployeeNameMap(rows);
+  for(var j=0;j<(interactionRows||[]).length;j++){
+    var x=interactionRows[j]; var xn=names[x.user_id]; if(!xn || !by[xn]) continue;
+    by[xn].chats++;
+    if(x.prompt_excerpt && by[xn].recent.length<2) by[xn].recent.push(x.prompt_excerpt);
+    if(new Date(x.ts) > new Date(by[xn].last)) by[xn].last=x.ts;
   }
   var list=Object.keys(by).map(function(k){return by[k]}).sort(function(a,b){
     return new Date(b.last)-new Date(a.last);
@@ -3040,6 +3085,7 @@ function paintTeamHumans(rows){
       '</div>'+
       '<div class="team-card-meta">'+
         '<span>'+p.count+' note'+(p.count===1?'':'s')+'</span>'+
+        (p.chats?'<span>'+p.chats+' chat'+(p.chats===1?'':'s')+'</span>':'')+
         '<span>last active '+timeAgo(p.last)+'</span>'+
       '</div>'+
       recent+
@@ -3101,7 +3147,7 @@ function paintTeamLearnings(rows){
   var html=rows.map(function(l){
     var text=l.title||l.learning||'';
     var who=l.employee_name||l.skill_name||'unknown';
-    var kind=l.knowledge_type ? (' - '+l.knowledge_type) : '';
+    var kind=l.activity_type ? (' - '+l.activity_type) : (l.knowledge_type ? (' - '+l.knowledge_type) : '');
     if(text.length>320) text=text.substring(0,320)+'…';
     return '<div class="card-item">'+
       '<div class="team-skill">'+hesc(who+kind)+'</div>'+
