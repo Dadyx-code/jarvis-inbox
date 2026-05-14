@@ -1919,7 +1919,7 @@ body.drawer-open .fab { opacity: 0; pointer-events: none; }
 
   <!-- TEAM -->
   <div class="page" id="page-team">
-    <div class="page-header"><h1>Team</h1><div class="sub" id="tm-count">Humans, AI specialists, learnings</div></div>
+    <div class="page-header"><h1>Team</h1><div class="sub" id="tm-count">Humans, AI specialists, team activity</div></div>
     <div id="st-tm" class="st"></div>
     <div class="team-grid">
       <section class="team-section">
@@ -1931,7 +1931,7 @@ body.drawer-open .fab { opacity: 0; pointer-events: none; }
         <div id="tmAgents" class="cards-stack"><div class="es" style="padding:var(--space-5)">Loading…</div></div>
       </section>
       <section class="team-section">
-        <div class="section-label">Recent learnings <span class="team-count" id="tm-learn-count"></span></div>
+        <div class="section-label">Recent team activity <span class="team-count" id="tm-learn-count"></span></div>
         <div id="tmLearn" class="cards-stack"><div class="es" style="padding:var(--space-5)">Loading…</div></div>
       </section>
     </div>
@@ -2980,24 +2980,22 @@ function loadTeam(){
   var tmEmp = SB+'/rest/v1/v_employee_activity?select=user_id,employee_name,knowledge_type,title,created_at&order=created_at.desc&limit=200';
   var tmAg  = SB+'/rest/v1/registry_active_agents?select=name,kind,scope,scope_deploy,description,updated_at&order=name.asc&limit=80';
   var tmRun = SB+'/rest/v1/agent_results?select=agent_name,status,created_at&order=created_at.desc&limit=80';
-  var tmLrn = SB+'/rest/v1/skill_learnings?select=id,skill_name,learning,created_at&order=created_at.desc&limit=15';
   var fopt = {headers:H};
   Promise.all([
     fetch(tmEmp,fopt).then(function(r){return r.json()}).catch(function(){return []}),
     fetch(tmAg,fopt).then(function(r){return r.json()}).catch(function(){return []}),
-    fetch(tmRun,fopt).then(function(r){return r.json()}).catch(function(){return []}),
-    fetch(tmLrn,fopt).then(function(r){return r.json()}).catch(function(){return []})
+    fetch(tmRun,fopt).then(function(r){return r.json()}).catch(function(){return []})
   ]).then(function(results){
-    var emp=results[0]||[], ag=results[1]||[], runs=results[2]||[], lrn=results[3]||[];
+    var emp=results[0]||[], ag=results[1]||[], runs=results[2]||[], lrn=emp.slice(0,15);
     paintTeamHumans(emp);
     paintTeamAgents(ag, runs);
     paintTeamLearnings(lrn);
     var totals=[];
     if(emp.length) totals.push((groupCount(emp,'employee_name'))+' humans');
     if(ag.length)  totals.push(ag.length+' agents');
-    if(lrn.length) totals.push(lrn.length+' learnings');
+    if(lrn.length) totals.push(lrn.length+' activities');
     var sub=document.getElementById('tm-count');
-    if(sub) sub.textContent = totals.join(' • ') || 'Humans, AI specialists, learnings';
+    if(sub) sub.textContent = totals.join(' • ') || 'Humans, AI specialists, team activity';
   }).catch(function(e){
     ss('st-tm','Failed to load: '+e.message,'err');
   });
@@ -3095,16 +3093,18 @@ function paintTeamLearnings(rows){
   var lbl=document.getElementById('tm-learn-count');
   if(!el) return;
   if(!rows.length){
-    el.innerHTML='<div class="es" style="padding:var(--space-5)">No learnings captured yet.</div>';
+    el.innerHTML='<div class="es" style="padding:var(--space-5)">No team activity captured yet.</div>';
     if(lbl) lbl.textContent='';
     return;
   }
   if(lbl) lbl.textContent = '('+rows.length+')';
   var html=rows.map(function(l){
-    var text=l.learning||'';
+    var text=l.title||l.learning||'';
+    var who=l.employee_name||l.skill_name||'unknown';
+    var kind=l.knowledge_type ? (' - '+l.knowledge_type) : '';
     if(text.length>320) text=text.substring(0,320)+'…';
     return '<div class="card-item">'+
-      '<div class="team-skill">'+hesc(l.skill_name||'unknown')+'</div>'+
+      '<div class="team-skill">'+hesc(who+kind)+'</div>'+
       '<div class="team-learning">'+hesc(text)+'</div>'+
       '<div class="team-card-meta"><span>'+timeAgo(l.created_at)+'</span></div>'+
     '</div>';

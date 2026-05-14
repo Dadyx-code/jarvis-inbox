@@ -1,5 +1,5 @@
-// Jarvis SW v22 — sprint/5c-2-6-account: Account page (identity + sign-out)
-const CACHE = 'jarvis-v22';
+// Jarvis SW v23 - team activity reads employee Brain activity, not skill_learnings
+const CACHE = 'jarvis-v23';
 
 self.addEventListener('install', function(e) {
   self.skipWaiting();
