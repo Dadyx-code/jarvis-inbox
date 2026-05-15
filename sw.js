@@ -1,5 +1,5 @@
-// Jarvis SW v25 - team health separates login, chat telemetry, and knowledge
-const CACHE = 'jarvis-v25';
+// Jarvis SW v26 - admin can re-issue login OTP for active employees
+const CACHE = 'jarvis-v26';
 
 self.addEventListener('install', function(e) {
   self.skipWaiting();

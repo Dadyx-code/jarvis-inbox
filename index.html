@@ -3352,7 +3352,8 @@ function showOtpResult(d){
 /* ===== ADMIN LIFECYCLE + EDIT-COMPANIES + AUDIT LOG (5c.2.5b) ===== */
 
 /* Per-row action buttons. Owner row gets none.
-   Lifecycle button is state-aware: disabled→Re-enable, never-signed-in→Cancel invite, else→Disable. */
+   Lifecycle button is state-aware: disabled→Re-enable, never-signed-in→Cancel invite, else→Disable.
+   OTP can be re-issued for any enabled employee, including active users who need a fresh local login. */
 function adminUserActions(u, disabled){
   if(u.is_owner) return ''; /* owner cannot be modified */
   var html='<div class="user-card-actions">';
@@ -3360,11 +3361,13 @@ function adminUserActions(u, disabled){
   html+='<button class="user-action-btn ua-edit-co" data-action="edit-companies" data-uid="'+u.id+'" data-name="'+hesc(u.name||'')+'" data-email="'+hesc(u.login_email||u.email||'')+'" data-companies="'+companiesPayload+'">Edit companies</button>';
   if(disabled){
     html+='<button class="user-action-btn ua-enable" data-action="enable" data-uid="'+u.id+'" data-name="'+hesc(u.name||'')+'">Re-enable</button>';
-  }else if(!u.last_sign_in_at){
-    html+='<button class="user-action-btn ua-resend" data-action="resend-otp" data-uid="'+u.id+'" data-name="'+hesc(u.name||'')+'" data-email="'+hesc(u.login_email||u.email||'')+'">Resend OTP</button>';
-    html+='<button class="user-action-btn ua-cancel" data-action="cancel" data-uid="'+u.id+'" data-name="'+hesc(u.name||'')+'">Cancel invite</button>';
   }else{
-    html+='<button class="user-action-btn ua-disable" data-action="disable" data-uid="'+u.id+'" data-name="'+hesc(u.name||'')+'">Disable</button>';
+    html+='<button class="user-action-btn ua-resend" data-action="resend-otp" data-uid="'+u.id+'" data-name="'+hesc(u.name||'')+'" data-email="'+hesc(u.login_email||u.email||'')+'">'+(u.last_sign_in_at?'Re-login OTP':'Resend OTP')+'</button>';
+    if(!u.last_sign_in_at){
+      html+='<button class="user-action-btn ua-cancel" data-action="cancel" data-uid="'+u.id+'" data-name="'+hesc(u.name||'')+'">Cancel invite</button>';
+    }else{
+      html+='<button class="user-action-btn ua-disable" data-action="disable" data-uid="'+u.id+'" data-name="'+hesc(u.name||'')+'">Disable</button>';
+    }
   }
   html+='</div>';
   return html;
@@ -3397,11 +3400,10 @@ function runUserAction(action, userId, userName){
     .catch(function(e){ ss('st-ad',e.message,'err'); });
 }
 
-/* Re-issue an OTP for a never-signed-in user. Calls jarvis-issue-link
+/* Re-issue an OTP for an enabled user. Calls jarvis-issue-link
    (which calls admin.auth.admin.generateLink under the hood, overwriting the
    confirmation_token hash so verifyOtp picks up the new code). Shows the
-   same one-time OTP modal as the initial invite. No confirm step — the
-   only side-effect is overwriting an unused secret. */
+   same one-time OTP modal as the initial invite. */
 function resendOtp(userId, userName, userEmail){
   ss('st-ad','Issuing new OTP for '+userName+'…','wait');
   fetch(SB+'/functions/v1/jarvis-issue-link',{
